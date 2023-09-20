@@ -2,10 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Telegram\Robot;
 use Illuminate\Console\Command;
-use Longman\TelegramBot\Request;
-use Longman\TelegramBot\Telegram;
-use Longman\TelegramBot\Entities\User;
 
 class TelegramGetMe extends Command
 {
@@ -29,17 +27,15 @@ class TelegramGetMe extends Command
     public function handle()
     {
         // 获取配置
-        $config = config('telegram.bot');
-        // 实例对象
-        new Telegram($config['api_token'], $config['username']);
-        // 获取数据
-        $res = Request::getMe();
-        if ($res->isOk()) {
-            // 用户信息
-            $user = $res->getResult();
+        $configs = config('telegram.bots');
+        // 循环配置
+        foreach ($configs as $bot => $config) {
+            // 机器人实例
+            $user = (new Robot($bot))->getMe();
             // 输出信息
-            $this->info($user->first_name);
-            $this->info($user->username);
+            $this->info($user['username']);
+            $this->info($user['first_name']);
+            $this->newLine();
         }
     }
 }

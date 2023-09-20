@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Telegram\Robot;
 use Illuminate\Console\Command;
-use Longman\TelegramBot\Telegram;
 
 class TelegramUnHook extends Command
 {
@@ -27,13 +27,17 @@ class TelegramUnHook extends Command
     public function handle()
     {
         // 获取配置
-        $config = config('telegram.bot');
-        // 实例对象
-        $telegram = new Telegram($config['api_token'], $config['username']);
-        // 设置HOOK
-        $result = $telegram->deleteWebhook();
-        if ($result->isOk()) {
-            $this->info($result->getDescription());
+        $configs = config('telegram.bots');
+        // 循环配置
+        foreach ($configs as $bot => $config) {
+            // 机器人实例
+            $robot = new Robot($bot);
+            // 删除WebHook
+            $res = $robot->deleteWebhook();
+            // 输出信息
+            $this->info($bot);
+            $this->info($res);
+            $this->newLine();
         }
     }
 }

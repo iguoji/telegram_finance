@@ -25,6 +25,21 @@ class Test extends Command
      */
     public function handle()
     {
-        $this->info(app_path('Commands'));
+        // $arr = [
+        //     'a' => 1,
+        //     'b' => [
+        //         'c' => 2,
+        //     ],
+        // ];
+
+        // var_dump($arr['b']['d'] ?? 'none');
+
+
+        $text = 'abc';
+        list($command, $argument) = explode(' ', $text);
+        var_dump([$command, $argument]);
+
+
+        $this->info('1');
     }
 }

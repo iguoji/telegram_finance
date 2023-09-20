@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Telegram\HookController;
+use App\Http\Controllers\TelegramController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,9 +15,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
 
 
-Route::any('telegram/hook', HookController::class)->name('telegram.hook');
+// 循环注册
+$bots = config('telegram.bots');
+foreach ($bots as $key => $bot) {
+    // 消息句柄
+    Route::any('telegram/hook/' . $key, TelegramController::class)->name('telegram.hook.' . $key);
+}
