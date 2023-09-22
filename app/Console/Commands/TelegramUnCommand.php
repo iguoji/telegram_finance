@@ -31,7 +31,11 @@ class TelegramUnCommand extends Command
         // 循环配置
         foreach ($configs as $bot => $config) {
             // 机器人实例
-            $res = (new Robot($bot))->deleteMyCommands();
+            $res = (new Robot($bot))->deleteMyCommands([
+                // 'scope'     =>  json_encode([
+                //     'type'  =>  'all_private_chats',
+                // ]),
+            ]);
 
             // 输出信息
             $this->info($bot);

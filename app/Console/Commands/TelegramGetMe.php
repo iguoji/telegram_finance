@@ -34,7 +34,7 @@ class TelegramGetMe extends Command
             $user = (new Robot($bot))->getMe();
             // 输出信息
             $this->info($user['username']);
-            $this->info($user['first_name']);
+            $this->info($user['first_name'] . ' ' . ($user['last_name'] ?? ''));
             $this->newLine();
         }
     }

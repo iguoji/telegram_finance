@@ -25,17 +25,17 @@ class AllBillCommand extends Command
     /**
      * 执行命令
      */
-    public function execute(string $text = '', array $user = [], array $chat = [], array $message = []): void
+    public function execute(string $argument = null) : mixed
     {
         // 准备内容
         $context = [
-            'chat_id'       =>  $chat['id'] ?? 1234,
+            'chat_id'       =>  $this->getUpdate()->getChatId(),
             'text'          =>  '完整账单!' . PHP_EOL .
                                 '详细信息可以查看[官网介绍](' . config('app.url') . ')!',
             'parse_mode'    =>  'Markdown',
         ];
 
         // 发送消息
-        $this->robot->sendMessage($context);
+        return $this->robot->sendMessage($context);
     }
 }

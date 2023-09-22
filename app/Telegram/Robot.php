@@ -3,6 +3,7 @@
 namespace App\Telegram;
 
 use App\Jobs\SendMessage;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -27,31 +28,70 @@ class Robot
     public array $commands = [];
 
     /**
-     * 回调列表
+     * 匹配列表
      */
-    public array $callbacks = [];
+    public array $matches = [];
 
     /**
-     * 键盘列表
+     * 拥有参数的匹配列表
      */
-    public array $keyboard = [];
+    public array $hasArgumentMatches = [];
+
+    /**
+     * 试用时间 单位：秒
+     */
+    public int $trial_expire;
+
+    /**
+     * USDT ERC20
+     */
+    public string $erc20;
+
+    /**
+     * USDT TRC20
+     */
+    public string $trc20;
+
+    /**
+     * 私聊配置
+     */
+    public array $private = [];
+
+    /**
+     * 群聊配置
+     */
+    public array $group = [];
 
     /**
      * 构造函数
      */
-    public function __construct(string $username)
+    public function __construct(array|string $bot)
     {
         // 配置信息
-        $this->username = $username;
-        $config = config('telegram.bots.' . $username);
-        $this->token = $config['token'];
-        $this->commands = $config['commands'];
-        $this->callbacks = $config['callbacks'];
-        $this->keyboard = $config['keyboard'];
+        $bot = is_array($bot) ? $bot : config('telegram.bots.' . $bot);
+        $this->username = $bot['username'];
+        $this->token = $bot['token'];
+        $this->trial_expire = $bot['trial_expire'];
+        $this->trc20 = $bot['trc20'];
+        $this->erc20 = $bot['erc20'];
+        $this->commands = $bot['commands'];
 
-        // 回复键盘
-        $this->keyboard = array_map(fn($r) => array_map(fn($v) => ['text' => $v], $r), $this->keyboard);
+        // 匹配列表
+        foreach ($bot['matches'] as $abstract => $class) {
+            if (str_ends_with($abstract, '*')) {
+                $command = mb_substr($abstract, 0, -1);
+                $this->matches[$command] = $class;
+                $this->hasArgumentMatches[$command] = $class;
+            } else {
+                $this->matches[$abstract] = $class;
+            }
+        }
 
+        // 私聊配置
+        $this->private = $bot['private'];
+
+        // 群聊配置
+        $this->group = $bot['group'];
     }
 
     /**
@@ -65,45 +105,105 @@ class Robot
     }
 
     /**
+     * 匹配模式
+     */
+    public function match(string $text) : array
+    {
+        // 循环匹配
+        foreach ($this->matches as $abstract => $class) {
+            // 直接相等
+            if ($abstract == $text) {
+                // 返回结果
+                return [$abstract, $class, false];
+            }
+            // 开头相等 并 支持参数
+            if (str_starts_with($text, $abstract) && isset($this->hasArgumentMatches[$abstract])) {
+                return [$abstract, $class, true];
+            }
+        }
+
+        // 没有找到
+        return [null, null, null];
+    }
+
+    /**
      * 处理句柄
      */
-    public function handle(string $secret, array $update) : mixed
+    public function handle(string $secret, array $context) : mixed
     {
         // 检查令牌
         $this->check($secret);
 
         // 日志记录
-        Log::debug('robot handle', $update);
+        Log::debug('robot handle', $context);
 
         // 检查数据
-        if (!empty($update['update_id'])) {
-
-            // 具体消息
-            $message = $update['message'] ?? $update['callback_query']['message'] ?? [];
-            // 来源用户
-            $user = $update['callback_query']['from'] ?? $message['from'] ?? [];
-            // 聊天窗口
-            $chat = $message['chat'] ?? [];
+        if (!empty($context['update_id'])) {
+            // 消息对象
+            $update = new Update($context);
             // 文本内容
-            $text = trim($message['text'] ?? $update['callback_query']['data'] ?? '');
+            $text = $update->getText();
+            // 匹配模式
+            list($command, $commandClass, $hasArgument) = $this->match($text);
+            Log::debug('robot handle 1', [$command, $commandClass, $text, $this->matches]);
+            if ($command && $commandClass) {
+                // 私聊
+                if ($update->getChatType() == Chat::TYPE_PRIVATE) {
+                    // 聊天配置
+                    $config = $this->private['default'];
+                    // 如果是高级用户
+                    if (Cache::get('identity:private:premium:' . $update->getFromId())) {
+                        $config = $this->private['premium'];
+                    }
+                    // 可用的命令列表
+                    $matches = $config['matches'];
 
+                    Log::debug('robot handle 2', [$command, $hasArgument, $matches]);
+                    
+                    // 存在使用该命令的资格
+                    if (in_array($command, $matches) || ($hasArgument && in_array($command . '*', $matches))) {
+                        // 解析参数
+                        $argument = null;
+                        if ($hasArgument) {
+                            $argument = mb_substr($text, mb_strlen($command));
+                        }
+                        // 执行命令
+                        return (new $commandClass($this, $update, $config))->handle($argument);
+                    }
+                } else {
+                    // 获取身份
+
+                }
+            }
+            // $matches = $update->getChatType() == Chat::TYPE_PRIVATE ? ;
+            // foreach ($variable as $key => $value) {
+            //     # code...
+            // }
             // 检查指令
-            foreach ($this->commands as $usage => $class) {
-                // 如果以该指令开头
-                if (str_starts_with($text, $usage)) {
-                    $ins = new $class($this);
-                    return $ins->execute($text, $user, $chat, $message);
-                }
-            }
+            // foreach ($this->commands as $usage => $class) {
+            //     // 如果以该指令开头
+            //     if (str_starts_with($text, $usage)) {
+            //         $ins = app($this->username . '.' . $usage);
+            //         //$ins = new $class($this, $update);
+            //         $ins->setRobot($this)->setUpdate($update);
+            //         if ($ins->validate()) {
+            //             return $ins->execute();
+            //         }
+            //     }
+            // }
 
-            // 检查回调
-            foreach ($this->callbacks as $usage => $class) {
-                // 如果以该指令开头
-                if (str_starts_with($text, $usage)) {
-                    $ins = new $class($this);
-                    return $ins->execute($text, $user, $chat, $message);
-                }
-            }
+            // // 检查回调
+            // foreach ($this->callbacks as $usage => $class) {
+            //     // 如果以该指令开头
+            //     if (str_starts_with($text, $usage)) {
+            //         $ins = app($this->username . '.' . $usage);
+            //         //$ins = new $class($this, $update);
+            //         $ins->setRobot($this)->setUpdate($update);
+            //         if ($ins->validate()) {
+            //             return $ins->execute();
+            //         }
+            //     }
+            // }
         }
 
         // 返回结果
@@ -111,53 +211,14 @@ class Robot
     }
 
     /**
-     * 解析参数
-     */
-    public function parseArgs(string $text, string $usage) : bool|string
-    {
-        return str_starts_with($text, $usage) ? mb_substr($text, mb_strlen($usage)) : false;
-    }
-
-    /**
-     * 处理普通消息
-     */
-    public function handleMessage(array $context)
-    {
-        // 消息文本
-        $text = trim($context['text'] ?? '');
-        // 执行命令
-        if (str_starts_with($text, '/')) {
-            $inputs = explode(' ', $text);
-            $command = array_shift($inputs);
-            $commandClass = $this->commands[$command] ?? '';
-            if ($commandClass) {
-                $ins = new $commandClass($this);
-                $ins->execute($context, $inputs);
-            }
-        } else {
-            // 执行回调
-            $callbackClass = $this->callbacks[$text] ?? '';
-            if ($callbackClass) {
-                $ins = new $callbackClass($this);
-                $ins->execute($context);
-            }
-        }
-    }
-
-    /**
-     * 处理回调消息
-     */
-    public function handleCallbackQuery(array $context)
-    {
-
-    }
-
-    /**
      * 发送消息
      */
     public function sendMessage(array $content = []) : mixed
     {
-        return SendMessage::dispatch($this, $content);
+        // 安排在队列中执行
+        SendMessage::dispatch($this, $content);
+        // $this->call('sendMessage', $content);
+        return true;
     }
 
     /**
@@ -176,7 +237,7 @@ class Robot
         $obj = $info->json();
         Log::debug('request', [$url, $paramaters, $obj]);
         if ($obj['ok']) {
-            return $obj['result'] === true ? ($obj['description'] ?? '') : $obj['result'];
+            return $obj['result'] === true ? ($obj['description'] ?? 'success') : $obj['result'];
         } else {
             abort($obj['error_code'], $obj['description'] ?? $obj['error_code']);
         }
@@ -187,20 +248,6 @@ class Robot
      */
     public function call(string $name, array $content = []) : mixed
     {
-        // 发送消息
-        if ($name == 'sendMessage') {
-            // 不存在回复标记、发送键盘
-            if (empty($content['reply_markup'])) {
-                // 回复标记
-                $content['reply_markup'] = $content['reply_markup'] ?? [];
-                // 键盘
-                $content['reply_markup']['keyboard'] = $this->keyboard;
-                // JSON
-                $content['reply_markup'] = json_encode($content['reply_markup']);
-            }
-        }
-
-        // 请求并返回结果
         return $this->request($name, $content);
     }
 

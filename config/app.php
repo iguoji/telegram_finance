@@ -55,7 +55,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://www.zidongjizhang.com'),
+    'url' => env('APP_URL', 'https://nl.zidongjizhang.com'),
 
     'asset_url' => env('ASSET_URL'),
 
@@ -122,7 +122,7 @@ return [
     |
     */
 
-    'key' => env('APP_KEY'),
+    'key' => env('APP_KEY', 'Ls#QNpkz5BxB*xkY1hkdr1NYssh0Otjg'),
 
     'cipher' => 'AES-256-CBC',
 
@@ -168,6 +168,7 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+
     ])->toArray(),
 
     /*

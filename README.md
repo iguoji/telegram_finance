@@ -1,3 +1,197 @@
+## 开始运行
+
+```bash
+composer install
+php artisan migrate
+php artisan telegram:hook
+php artisan telegram:command
+php artisan queue:work
+
+```
+## 环境部署
+
+```bash
+# PHP
+apt install php8.1 php8.1-bcmath php8.1-common php8.1-curl php8.1-dev php8.1-fpm php8.1-gd php8.1-gmp php8.1-mbstring php8.1-msgpack php8.1-mysql php8.1-opcache php8.1-redis php8.1-xml php8.1-yaml php8.1-zip zip unzip
+systemctl enable php8.1-fpm
+systemctl start php8.1-fpm
+
+# Composer
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+php composer-setup.php
+php -r "unlink('composer-setup.php');"
+sudo mv composer.phar /usr/local/bin/composer
+
+# phpmyadmin
+cd /home/wwwroot
+composer create-project phpmyadmin/phpmyadmin
+cd phpmyadmin
+cp config.sample.inc.php config.inc.php
+
+vi config.inc.php
+$cfg['blowfish_secret'] = 'qq123567231qq123567231qq12356723'
+
+mkdir tmp && chmod -R 777 tmp
+
+# Redis
+apt install redis
+systemctl enable redis-server
+systemctl start redis-server
+
+# MariaDb
+apt install mariadb-server
+systemctl enable mariadb
+systemctl start mariadb
+mysql_secure_installation
+
+# Swoole
+pecl install swoole
+vi /etc/php/8.1/cli/conf.d/swoole.ini
+extension=swoole.so
+
+# Nginx
+apt install nginx
+systemctl enable nginx
+systemctl start nginx
+```
+
+## Nginx配置
+
+> vi /etc/nginx/conf.d/finance.conf
+
+```conf
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen       80;
+    server_name  nl.zidongjizhang.com;
+    #return 301 https://nl.zidongjizhang.com$uri;
+    #将所有HTTP请求通过rewrite指令重定向到HTTPS。
+    rewrite ^(.*)$ https://$host$1;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name nl.zidongjizhang.com;
+    server_tokens off;
+
+    #填写证书文件名称
+    ssl_certificate /home/certs/nl.zidongjizhang.com.pem;
+    #填写证书私钥文件名称
+    ssl_certificate_key /home/certs/nl.zidongjizhang.com.key;
+
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout 5m;
+
+    #自定义设置使用的TLS协议的类型以及加密套件（以下为配置示例，请您自行评估是否需要配置）
+    #TLS协议版本越高，HTTPS通信的安全性越高，但是相较于低版本TLS协议，高版本TLS协议对浏览器的兼容性较差。
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
+
+    #表示优先使用服务端加密套件。默认开启
+    ssl_prefer_server_ciphers on;
+
+    root /home/wwwroot/telegram_finance/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location /index.php {
+        try_files /not_exists @octane;
+    }
+
+    location / {
+        try_files $uri $uri/ @octane;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    access_log off;
+    error_log  /var/log/nginx/domain.com-error.log error;
+
+    error_page 404 /index.php;
+
+    location @octane {
+        set $suffix "";
+
+        if ($uri = /index.php) {
+            set $suffix ?$query_string;
+        }
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Scheme $scheme;
+        proxy_set_header SERVER_PORT $server_port;
+        proxy_set_header REMOTE_ADDR $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_pass http://127.0.0.1:8000$suffix;
+    }
+}
+```
+
+> vi /etc/nginx/conf.d/phpmyadmin.conf
+
+```conf
+server {
+    listen 33066;
+    server_name nl_zidongjizhang.com;
+    root /home/wwwroot/phpmyadmin;
+    index index.php index.html index.htm;
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include /etc/nginx/fastcgi_params;
+        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+    }
+}
+```
+
+## Systemctl
+
+> vi /usr/lib/systemd/system/octane.service
+
+```conf
+[Unit]
+Description=Laravel Octane Server
+After=php8.1-fpm.service
+
+[Service]
+ExecStart=php /home/wwwroot/telegram_finance/artisan octane:start
+ExecReload=php /home/wwwroot/telegram_finance/artisan octane:reload
+ExecStop=php /home/wwwroot/telegram_finance/artisan octane:stop
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> vi /usr/lib/systemd/system/queue.service
+
+```conf
+[Unit]
+Description=Laravel Queue Server
+After=octane.service
+
+[Service]
+ExecStart=php /home/wwwroot/telegram_finance/artisan queue:work
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
 ## Update Json
 
 - 私聊指令
@@ -86,78 +280,3 @@
 	}
 }
 ```
-
-## About Systemctl
-
-```bash
-vi /usr/lib/systemd/system/octane.service
-
-[Unit]
-Description=Laravel Octane Server
-After=nginx.service
-
-[Service]
-ExecStart=php /home/wwwroot/telegram/finance/artisan octane:start
-ExecReload=php /home/wwwroot/telegram/finance/artisan octane:reload
-ExecStop=php /home/wwwroot/telegram/finance/artisan octane:stop
-
-[Install]
-WantedBy=multi-user.target
-
-
-vi /usr/lib/systemd/system/queue.service
-
-[Unit]
-Description=Laravel Queue Server
-After=octane.service
-
-[Service]
-ExecStart=php /home/wwwroot/telegram/finance/artisan queue:work
-
-[Install]
-WantedBy=multi-user.target
-```
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

@@ -19,7 +19,7 @@ class TelegramCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Telegram Bot Command description';
 
     /**
      * Execute the console command.
@@ -60,6 +60,7 @@ class TelegramCommand extends Command
             $res = $robot->setMyCommands([
                 'commands'      =>      json_encode($commands),
             ]);
+            
             // 输出信息
             $this->info($res);
 
