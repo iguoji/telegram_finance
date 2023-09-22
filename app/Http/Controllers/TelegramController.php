@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Telegram\Robot;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
-
 
 class TelegramController extends Controller
 {
@@ -19,10 +17,10 @@ class TelegramController extends Controller
         $routeName = Route::currentRouteName();
         $bot = explode('.', $routeName)[2];
 
-        // 机器人处理
+        // 返回结果
         return (new Robot($bot))
             ->handle(
-                $request->header('X-Telegram-Bot-Api-Secret-Token', ''), 
+                $request->header('X-Telegram-Bot-Api-Secret-Token', ''),
                 json_decode($request->getContent(), true),
             );
     }

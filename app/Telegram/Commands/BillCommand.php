@@ -1,25 +1,26 @@
 <?php
 
-namespace App\Telegram\Callbacks;
+namespace App\Telegram\Commands;
 
-use App\Telegram\Callback;
+use App\Telegram\Command;
+use Illuminate\Support\Facades\Log;
 
-class TrialCallback extends Callback
+class BillCommand extends Command
 {
     /**
      * 名称
      */
-    public $name = 'trial';
+    public $name = 'bill';
 
     /**
      * 描述
      */
-    public $description = 'Trial Callback';
+    public $description = '显示账单，以简约的方式看看账单!';
 
     /**
      * 命令
      */
-    public $usage = 'trial';
+    public $usage = '/bill';
 
     /**
      * 执行命令
@@ -29,8 +30,8 @@ class TrialCallback extends Callback
         // 准备内容
         $context = [
             'chat_id'       =>  $chat['id'] ?? 1234,
-            'text'          =>  '正在帮您申请试用资格，请稍等!' . PHP_EOL .
-                                '----',
+            'text'          =>  '显示账单!' . PHP_EOL .
+                                '详细信息可以查看[官网介绍](' . config('app.url') . ')!',
             'parse_mode'    =>  'Markdown',
         ];
 

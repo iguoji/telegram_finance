@@ -5,21 +5,21 @@ namespace App\Console\Commands;
 use App\Telegram\Robot;
 use Illuminate\Console\Command;
 
-class TelegramHook extends Command
+class TelegramUnCommand extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'telegram:hook';
+    protected $signature = 'telegram:uncommand';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'set webhook';
+    protected $description = 'Unset Command description';
 
     /**
      * Execute the console command.
@@ -31,13 +31,10 @@ class TelegramHook extends Command
         // 循环配置
         foreach ($configs as $bot => $config) {
             // 机器人实例
-            $res = (new Robot($bot))->setWebhook([
-                'url'           =>  ($url = route('telegram.hook.' . $bot)),
-                'secret_token'  =>  md5($config['token']),
-            ]);
+            $res = (new Robot($bot))->deleteMyCommands();
+
             // 输出信息
             $this->info($bot);
-            $this->info($url);
             $this->info($res);
             $this->newLine();
         }

@@ -11,21 +11,25 @@ abstract class Command extends Callback
     /**
      * 名称
      */
-    protected $name = 'start';
+    public $name = 'start';
 
     /**
      * 描述
      */
-    protected $description = 'Start command';
+    public $description = 'Start command';
 
     /**
      * 命令
      */
-    protected $usage = '/start';
+    public $usage = '/start';
 
     /**
      * 版本
      */
-    protected $version = '1.2.0';
+    public $version = '1.0.0';
 
+    /**
+     * 是否需要注册
+     */
+    public $is_registered = true;
 }

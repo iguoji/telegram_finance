@@ -9,25 +9,24 @@ use App\Telegram\Robot;
 abstract class Callback
 {
     /**
-     * 命令
+     * 具体命令
+     * 如果是指令，需要以/开头
      */
-    protected $usage = 'trial';
+    public $usage = 'trial';
 
     /**
-     * 仅私人聊天可用
+     * 参数数量
      */
-    protected $private_only = true;
+    public $argc = 0;
 
     /**
      * 构造函数
      */
-    public function __construct(protected Robot $robot, protected array $update, array $arguments = [])
-    {
-        $this->execute($arguments);
-    }
+    public function __construct(public Robot $robot)
+    {}
 
     /**
      * 执行命令
      */
-    abstract public function execute(array $arguments = []) : void;
+    abstract public function execute(string $text = '', array $user = [], array $chat = [], array $message = []) : void;
 }

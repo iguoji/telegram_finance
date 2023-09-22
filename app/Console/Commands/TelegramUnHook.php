@@ -31,9 +31,7 @@ class TelegramUnHook extends Command
         // 循环配置
         foreach ($configs as $bot => $config) {
             // 机器人实例
-            $robot = new Robot($bot);
-            // 删除WebHook
-            $res = $robot->deleteWebhook();
+            $res = (new Robot($bot))->deleteWebhook();
             // 输出信息
             $this->info($bot);
             $this->info($res);
