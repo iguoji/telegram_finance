@@ -16,10 +16,5 @@ use Illuminate\Support\Facades\Route;
 */
 
 
-
-// 循环注册
-$bots = config('telegram.bots');
-foreach ($bots as $key => $bot) {
-    // 消息句柄
-    Route::any('telegram/hook/' . $key, TelegramController::class)->name('telegram.hook.' . $key);
-}
+// 消息句柄
+Route::post('telegram/hook', TelegramController::class)->name('telegram.hook');

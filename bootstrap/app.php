@@ -41,6 +41,32 @@ $app->singleton(
     App\Exceptions\Handler::class
 );
 
+
+/**
+ * Custom Function
+ */
+if (!function_exists('success')) {
+    function success($data = [], $message = '恭喜您、操作成功！')
+    {
+        return response()->json([
+            'code'      =>  200,
+            'message'   =>  $message,
+            'data'      =>  $data,
+        ]);
+    }
+}
+if (!function_exists('error')) {
+    function error($message = '很抱歉、操作失败！', $code = 500, $data = [])
+    {
+        return response()->json([
+            'code'      =>  $code,
+            'message'   =>  $message,
+            'data'      =>  $data,
+        ]);
+    }
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | Return The Application

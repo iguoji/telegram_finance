@@ -65,33 +65,38 @@ class Robot
     /**
      * 构造函数
      */
-    public function __construct(array|string $bot)
+    public function __construct(array|string $bot = null)
     {
-        // 配置信息
-        $bot = is_array($bot) ? $bot : config('telegram.bots.' . $bot);
-        $this->username = $bot['username'];
-        $this->token = $bot['token'];
-        $this->trial_expire = $bot['trial_expire'];
-        $this->trc20 = $bot['trc20'];
-        $this->erc20 = $bot['erc20'];
-        $this->commands = $bot['commands'];
+        if ($bot) {
+            // 配置信息
+            $bot = is_array($bot) ? $bot : config('telegram.bots.' . $bot);
+            if (!empty($bot)) {
+                // 更新配置
+                $this->username = $bot['username'];
+                $this->token = $bot['token'];
+                $this->trial_expire = $bot['trial_expire'];
+                $this->trc20 = $bot['trc20'];
+                $this->erc20 = $bot['erc20'];
+                $this->commands = $bot['commands'];
 
-        // 匹配列表
-        foreach ($bot['matches'] as $abstract => $class) {
-            if (str_ends_with($abstract, '*')) {
-                $command = mb_substr($abstract, 0, -1);
-                $this->matches[$command] = $class;
-                $this->hasArgumentMatches[$command] = $class;
-            } else {
-                $this->matches[$abstract] = $class;
+                // 匹配列表
+                foreach ($bot['matches'] as $abstract => $class) {
+                    if (str_ends_with($abstract, '*')) {
+                        $command = mb_substr($abstract, 0, -1);
+                        $this->matches[$command] = $class;
+                        $this->hasArgumentMatches[$command] = $class;
+                    } else {
+                        $this->matches[$abstract] = $class;
+                    }
+                }
+
+                // 私聊配置
+                $this->private = $bot['private'];
+
+                // 群聊配置
+                $this->group = $bot['group'];
             }
         }
-
-        // 私聊配置
-        $this->private = $bot['private'];
-
-        // 群聊配置
-        $this->group = $bot['group'];
     }
 
     /**
@@ -216,8 +221,8 @@ class Robot
     public function sendMessage(array $content = []) : mixed
     {
         // 安排在队列中执行
-        SendMessage::dispatch($this, $content);
-        // $this->call('sendMessage', $content);
+        // SendMessage::dispatch($this, $content);
+        $this->call('sendMessage', $content);
         return true;
     }
 
@@ -227,9 +232,10 @@ class Robot
     public function request(string $method, array $paramaters = []) : mixed
     {
         // 请求地址
-        $url = 'https://api.telegram.org/bot' . $this->token . '/' . $method;
+        // $url = 'https://api.telegram.org/bot' . $this->token . '/' . $method;
+        $url = 'http://127.0.0.1:8081/bot' . $this->token . '/' . $method;
         // 执行请求
-        $info = Http::timeout(3)->retry(3, 1000)->asJson()->post($url, $paramaters);
+        $info = Http::timeout(3)->retry(3, 1000, throw: false)->asJson()->post($url, $paramaters);
         if (empty($info)) {
             abort(555, 'empty result');
         }
