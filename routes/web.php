@@ -28,6 +28,20 @@ Route::prefix('admin')->name('admin.')->group(function(){
     // 机器人
     Route::resource('robot', App\Http\Controllers\Admin\RobotController::class);
     Route::post('/robot/refresh/{id}', [App\Http\Controllers\Admin\RobotController::class, 'refresh'])->name('robot.refresh');
+    Route::prefix('robot')->name('robot.')->controller(App\Http\Controllers\Admin\RobotController::class)->group(function(){
+        Route::post('/{id}/setChatPhoto', 'setChatPhoto')->name('setChatPhoto');
+        Route::post('/{id}/setMyName', 'setMyName')->name('setMyName');
+        Route::post('/{id}/setMyDescription', 'setMyDescription')->name('setMyDescription');
+        Route::post('/{id}/setMyShortDescription', 'setMyShortDescription')->name('setMyShortDescription');
+
+        Route::post('/{id}/setWebhook', 'setWebhook')->name('setWebhook');
+        Route::delete('/{id}/deleteWebhook', 'deleteWebhook')->name('deleteWebhook');
+        Route::post('/{id}/getWebhookInfo', 'getWebhookInfo')->name('getWebhookInfo');
+
+        Route::post('/{id}/setMyCommands', 'setMyCommands')->name('setMyCommands');
+        Route::delete('/{id}/deleteMyCommands', 'deleteMyCommands')->name('deleteMyCommands');
+        Route::post('/{id}/getMyCommands', 'getMyCommands')->name('getMyCommands');
+    });
 
     /**
      * 基础权限

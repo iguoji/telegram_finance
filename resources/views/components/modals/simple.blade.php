@@ -1,4 +1,4 @@
-<form action="{{ $action ?? '' }}" method="{{ $method ?? 'POST' }}">
+<form action="{{ $action ?? '' }}" method="{{ $method ?? 'POST' }}" enctype="{{ $enctype ?? 'application/x-www-form-urlencoded' }}">
     @method($method ?? 'POST')
     @csrf
     <div class="modal modal-blur fade" id="{{ $id }}" tabindex="-1" role="dialog" aria-hidden="true">
@@ -43,9 +43,10 @@ function onSimpleModalFormSubmit(target) {
             }
         },
         error: function(req, status, ex) {
-            if (req.status == 422) {
+            if (req.status == 400 || req.status == 422) {
                 toastr.warning(req.responseJSON.message);
             } else {
+                console.log(req);
                 toastr.error(req.status + ' - ' + req.statusText);
             }
         },

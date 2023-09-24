@@ -3,6 +3,7 @@
 namespace App\Telegram;
 
 use App\Jobs\SendMessage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -65,38 +66,9 @@ class Robot
     /**
      * 构造函数
      */
-    public function __construct(array|string $bot = null)
+    public function __construct(string $token = null)
     {
-        if ($bot) {
-            // 配置信息
-            $bot = is_array($bot) ? $bot : config('telegram.bots.' . $bot);
-            if (!empty($bot)) {
-                // 更新配置
-                $this->username = $bot['username'];
-                $this->token = $bot['token'];
-                $this->trial_expire = $bot['trial_expire'];
-                $this->trc20 = $bot['trc20'];
-                $this->erc20 = $bot['erc20'];
-                $this->commands = $bot['commands'];
-
-                // 匹配列表
-                foreach ($bot['matches'] as $abstract => $class) {
-                    if (str_ends_with($abstract, '*')) {
-                        $command = mb_substr($abstract, 0, -1);
-                        $this->matches[$command] = $class;
-                        $this->hasArgumentMatches[$command] = $class;
-                    } else {
-                        $this->matches[$abstract] = $class;
-                    }
-                }
-
-                // 私聊配置
-                $this->private = $bot['private'];
-
-                // 群聊配置
-                $this->group = $bot['group'];
-            }
-        }
+        $this->token = $token;
     }
 
     /**
@@ -232,16 +204,31 @@ class Robot
     public function request(string $method, array $paramaters = []) : mixed
     {
         // 请求地址
-        // $url = 'https://api.telegram.org/bot' . $this->token . '/' . $method;
         $url = 'http://127.0.0.1:8081/bot' . $this->token . '/' . $method;
+
+        // 循环参数
+        $files = [];
+        foreach ($paramaters as $field => $param) {
+            if (is_object($param) && $param instanceof UploadedFile) {
+                $files[$field] = $param;
+            }
+        }
+        
+        // 获取差集
+        $paramaters = array_diff_key($paramaters, $files);
+        
         // 执行请求
-        $info = Http::timeout(3)->retry(3, 1000, throw: false)->asJson()->post($url, $paramaters);
+        $http = Http::timeout(3);
+        foreach ($files as $field => $file) {
+            $http = $http->attach($field, $file, $file->getPathname());
+        }
+        $info = $http->post($url, $paramaters);
         if (empty($info)) {
             abort(555, 'empty result');
         }
+
         // 返回结果
         $obj = $info->json();
-        Log::debug('request', [$url, $paramaters, $obj]);
         if ($obj['ok']) {
             return $obj['result'] === true ? ($obj['description'] ?? 'success') : $obj['result'];
         } else {

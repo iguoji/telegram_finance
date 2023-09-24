@@ -82,9 +82,15 @@
                             <li class="nav-item">
                                 <a class="nav-link" href="./">
                                     <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-currency-dollar" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M16.7 8a3 3 0 0 0 -2.7 -2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1 -2.7 -2"></path><path d="M12 3v3m0 12v3"></path></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-shopping-cart" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                            <path d="M6 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                            <path d="M17 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                            <path d="M17 17h-11v-14h-2"></path>
+                                            <path d="M6 5l14 1l-1 7h-13"></path>
+                                         </svg>
                                     </span>
-                                    <span class="nav-link-title">价格</span>
+                                    <span class="nav-link-title">订单</span>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -96,15 +102,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="./">
-                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><polyline points="5 12 3 12 12 3 21 12 19 12" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg>
-                                    </span>
-                                    <span class="nav-link-title">配置</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="./">
+                                <a class="nav-link" href="#">
                                     <span class="nav-link-icon d-md-none d-lg-inline-block">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-settings" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg>
                                     </span>
@@ -184,59 +182,128 @@
     <script src="/assets/libs/toastr/toastr.min.js?1668287865"></script>
     <!-- Framework Script -->
     <script>
+        // AJAX
+        var ajax = function(options, $element){
+            // 按钮禁用
+            if ($element) {
+                var isA = $element.tagName == 'A';
+                if (isA) {
+                    $element.addClass('disabled link-btn');
+                } else {
+                    $element.addClass('btn-loading');
+                }
+            }
+
+            // 删除确认
+            if (options.method == 'delete' || options.method == 'DELETE') {
+                let result = confirm('确定要执行吗');
+                if (!result && $element) {
+                    if (isA) {
+                        $btn.removeClass('disabled link-btn');
+                    } else {
+                        $btn.removeClass('btn-loading');
+                    }
+                    return false;
+                }
+            }
+
+            // 参数整理
+            if (!options.data) {
+                options.data = new FormData();
+            }
+            if (!options.data.has('_method')) {
+                options.data.append('_method', options.method ? options.method : 'POST');
+            }
+            if (!options.data.has('_token')) {
+                options.data.append('_token', '{{ csrf_token() }}');
+            }
+            
+            // 执行请求
+            $.ajax({
+                method: (options.method == 'get' || options.method == 'GET' ? options.method : 'POST'),
+                url: options.url,
+                data: options.data,
+                processData: false,
+                contentType: false,
+                success: options.success ? options.success : function(res){
+                    if (res) {
+                        if (res.code == 200) {
+                            if (options.successCallback) {
+                                options.successCallback(res);
+                            } else {
+                                window.location.reload();
+                            }
+                        } else {
+                            toastr.warning(res.message);
+                        }
+                    } else {
+                        console.log('success', res);
+                    }
+                },
+                error: options.error ? options.error : function(req, status, ex) {
+                    if (req.status == 422) {
+                        toastr.warning(req.responseJSON.message);
+                    } else {
+                        toastr.error(req.status + ' - ' + req.statusText);
+                    }
+                },
+                complete: options.complete ? options.complete : function(){
+                    if ($element) {
+                        if (isA) {
+                            $element.removeClass('disabled link-btn');
+                        } else {
+                            $element.removeClass('btn-loading');
+                        }
+                    }
+                }
+            });
+        };
+
         document.addEventListener("DOMContentLoaded", function () {
+            // 模态框
+            $('[data-bs-toggle="modal"]').on('click', function(){
+                let target = $(this).data('bs-target');
+                let action = $(this).data('bs-action');
+                console.log(target)
+                console.log(action)
+                if (action) {
+                    $form = $(target).parents('form');
+                    console.log($form)
+                    if ($form && $form.length) {
+                        $form.attr('action', action);
+                    }
+                }
+            });
             // 快速请求
             $('[data-bs-toggle="fast-ajax"]').on('click', function(){
-                // 按钮禁用
-                $btn = $(this);
-                $btn.addClass('btn-loading');
                 // 获取参数
+                $btn = $(this);
                 let url = $btn.data('bs-target');
                 let method = $btn.data('bs-method');
                 method = method ? method : 'post';
                 let key = $btn.data('bs-key');
                 let value = $btn.data('bs-value');
-                if (method == 'delete' || method == 'DELETE') {
-                    let result = confirm('确定要执行吗');
-                    if (!result) {
-                        $btn.removeClass('btn-loading');
-                        return false;
-                    }
-                }
-                // 执行请求
+
+                // 整理参数
                 let data = new FormData();
-                data.append('_method', method);
-                data.append('_token', '{{ csrf_token() }}');
                 if (key) {
                     data.append(key, value);
                 }
-                $.ajax({
-                    method: (method == 'get' || method == 'GET' ? method : 'POST'),
+
+                // 执行请求
+                ajax({
+                    method: method,
                     url: url,
                     data: data,
-                    processData: false,
-                    contentType: false,
-                    success: function(res){
-                        if (res) {
-                            if (res.code == 200) {
-                                window.location.reload();
-                            } else {
-                                toastr.warning(res.message);
-                            }
-                        } else {
-                            console.log('success', res);
-                        }
-                    },
-                    error: function(req, status, ex) {
-                        if (req.status == 422) {
-                            toastr.warning(req.responseJSON.message);
-                        } else {
-                            toastr.error(req.status + ' - ' + req.statusText);
-                        }
-                    },
-                    complete: function(){
-                        $btn.removeClass('btn-loading');
-                    }
+                }, $btn);
+            });
+
+            // 复制内容
+            $('[data-bs-toggle="copy"]').on('click', function(){
+                navigator.clipboard.writeText($(this).val()).then(() => {
+                    $(this).select();
+                }).catch(() => {
+                    console.log('err');
                 });
             });
         });

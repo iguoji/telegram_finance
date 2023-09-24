@@ -15,6 +15,12 @@ use App\Telegram\Commands\StartCommand;
 
 return [
 
+    // 服务器列表
+    'servers'       =>  [
+        'https://www.zidongjizhang.com/api/telegram/hook',
+        'https://nl.zidongjizhang.com/api/telegram/hook',
+    ],
+
     // 机器人列表
     'bots' => [
 
@@ -159,6 +165,34 @@ return [
                     ],
                 ],
             ],
+        ],
+
+        'lufei668bot'               =>  [
+            'token'                 =>  '6502382554:AAHoC2sKzRWL5ldpx5d45sXHYbYW75Gt7vk',
+            'username'              =>  'lufei668bot',
+            'trial_expire'          =>  3600 * 3,
+            'trc20'                 =>  'TY8jNABVoReroGTuPhyb9RYhfNtyB3bb1p',
+            'erc20'                 =>  '0xa2e96F36f797a758eeEc6F802E53d29aE80bda71',
+            'commands'              =>  [],
+            'matches'               =>  [],
+        ],
+        'yixiu_bot'                 =>  [
+            'token'                 =>  '6676903886:AAH5hhGBV8KNnSnWVBcAgNWcSsSuCnP8HBo',
+            'username'              =>  'yixiu_bot',
+            'trial_expire'          =>  3600 * 3,
+            'trc20'                 =>  'TY8jNABVoReroGTuPhyb9RYhfNtyB3bb1p',
+            'erc20'                 =>  '0xa2e96F36f797a758eeEc6F802E53d29aE80bda71',
+            'commands'              =>  [],
+            'matches'               =>  [],
+        ],
+        'daifuzhushoubot'               =>  [
+            'token'                 =>  '6334070220:AAFrSuNaNfBeKz1E_HV8V7fSwGMIhQjoofc',
+            'username'              =>  'daifuzhushoubot',
+            'trial_expire'          =>  3600 * 3,
+            'trc20'                 =>  'TY8jNABVoReroGTuPhyb9RYhfNtyB3bb1p',
+            'erc20'                 =>  '0xa2e96F36f797a758eeEc6F802E53d29aE80bda71',
+            'commands'              =>  [],
+            'matches'               =>  [],
         ],
     ],
 ];
