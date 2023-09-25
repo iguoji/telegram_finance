@@ -3,6 +3,8 @@
 namespace App\Telegram;
 
 use App\Jobs\SendMessage;
+use App\Models\TelegramRobot;
+use App\Models\TelegramUser;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -24,61 +26,25 @@ class Robot
     public string $token;
 
     /**
-     * 命令列表
+     * 机器人模型
      */
-    public array $commands = [];
-
-    /**
-     * 匹配列表
-     */
-    public array $matches = [];
-
-    /**
-     * 拥有参数的匹配列表
-     */
-    public array $hasArgumentMatches = [];
-
-    /**
-     * 试用时间 单位：秒
-     */
-    public int $trial_expire;
-
-    /**
-     * USDT ERC20
-     */
-    public string $erc20;
-
-    /**
-     * USDT TRC20
-     */
-    public string $trc20;
-
-    /**
-     * 私聊配置
-     */
-    public array $private = [];
-
-    /**
-     * 群聊配置
-     */
-    public array $group = [];
+    public TelegramRobot $robot;
 
     /**
      * 构造函数
      */
-    public function __construct(string $token = null)
+    public function __construct(string $token = null, string $username = null, TelegramRobot $robot = null)
     {
-        $this->token = $token;
-    }
-
-    /**
-     * 检查请求
-     */
-    public function check(string $secret) : static
-    {
-        abort_if($secret != md5($this->token), 401, 'Origin Unauthorized');
-
-        return $this;
+        // 基本参数
+        if (!is_null($token)) {
+            $this->token = $token;
+        }
+        if (!is_null($username)) {
+            $this->username = $username;
+        }
+        if (!is_null($robot)) {
+            $this->robot = $robot;
+        }
     }
 
     /**
@@ -86,16 +52,32 @@ class Robot
      */
     public function match(string $text) : array
     {
+        // 全部回调
+        $callbacks = config('telegram.callbacks', []);
+        // 全部参数
+        $parameters = config('telegram.parameters', []);
         // 循环匹配
-        foreach ($this->matches as $abstract => $class) {
+        foreach ($callbacks as $abstract => $class) {
             // 直接相等
             if ($abstract == $text) {
                 // 返回结果
                 return [$abstract, $class, false];
             }
-            // 开头相等 并 支持参数
-            if (str_starts_with($text, $abstract) && isset($this->hasArgumentMatches[$abstract])) {
-                return [$abstract, $class, true];
+            // 支持参数
+            if (isset($parameters[$abstract])) {
+                $param = $parameters[$abstract];
+                // 支持前缀参数，并结尾相等
+                if (isset($param['pre']) && $param['pre'] && str_ends_with($text, $abstract)) {
+                    return [$abstract, $class, true];
+                }
+                // 支持后缀参数，并开头相等
+                if (isset($param['suf']) && $param['suf'] && str_starts_with($text, $abstract)) {
+                    return [$abstract, $class, true];
+                }
+                // 前后缀都支持，并存在其中
+                if (isset($param['pre']) && $param['pre'] && isset($param['suf']) && $param['suf'] && str_contains($text, $abstract)) {
+                    return [$abstract, $class, true];
+                }
             }
         }
 
@@ -106,11 +88,8 @@ class Robot
     /**
      * 处理句柄
      */
-    public function handle(string $secret, array $context) : mixed
+    public function handle(array $context) : mixed
     {
-        // 检查令牌
-        $this->check($secret);
-
         // 日志记录
         Log::debug('robot handle', $context);
 
@@ -121,37 +100,29 @@ class Robot
             // 文本内容
             $text = $update->getText();
             // 匹配模式
-            list($command, $commandClass, $hasArgument) = $this->match($text);
-            Log::debug('robot handle 1', [$command, $commandClass, $text, $this->matches]);
-            if ($command && $commandClass) {
+            list($callback, $callbackClass, $hasArgument) = $this->match($text);
+            if ($callback && $callbackClass) {
                 // 私聊
                 if ($update->getChatType() == Chat::TYPE_PRIVATE) {
-                    // 聊天配置
-                    $config = $this->private['default'];
-                    // 如果是高级用户
-                    if (Cache::get('identity:private:premium:' . $update->getFromId())) {
-                        $config = $this->private['premium'];
-                    }
                     // 可用的命令列表
-                    $matches = $config['matches'];
-
-                    Log::debug('robot handle 2', [$command, $hasArgument, $matches]);
-                    
+                    $matches = $this->robot->private;
                     // 存在使用该命令的资格
-                    if (in_array($command, $matches) || ($hasArgument && in_array($command . '*', $matches))) {
+                    if (in_array($callback, $matches)) {
                         // 解析参数
                         $argument = null;
-                        if ($hasArgument) {
-                            $argument = mb_substr($text, mb_strlen($command));
-                        }
+                        // if ($hasArgument) {
+                        //     $argument = mb_substr($text, mb_strlen($command));
+                        // }
                         // 执行命令
-                        return (new $commandClass($this, $update, $config))->handle($argument);
+                        return (new $callbackClass($this, $update))->handle($argument);
                     }
                 } else {
                     // 获取身份
 
                 }
             }
+            
+            
             // $matches = $update->getChatType() == Chat::TYPE_PRIVATE ? ;
             // foreach ($variable as $key => $value) {
             //     # code...

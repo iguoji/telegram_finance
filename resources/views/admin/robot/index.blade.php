@@ -8,23 +8,23 @@
     </x-slot:options>
     
     <div class="row">
-        @foreach ($users as $item)
+        @foreach ($robots as $item)
             <div class="col-lg-4">
                 <div class="card mb-3">
                     <div class="card-header">
                         <div>
                             <div class="row align-items-center">
                                 <div class="col-auto">
-                                    <span class="avatar" style="background-image: url(./static/avatars/000m.jpg)"></span>
+                                    <span class="avatar"></span>
                                 </div>
                                 <div class="col">
-                                    <div class="card-title">{{ $item->name }}</div>
-                                    <div class="card-subtitle"><a href="https://t.me/{{ $item->username }}" target="_blank">{{ '@' . $item->username }}</a></div>
+                                    <div class="card-title">{{ $item->user->name }}</div>
+                                    <div class="card-subtitle"><a class="small" href="https://t.me/{{ $item->user->username }}" target="_blank">{{ '@' . $item->user->username }}</a></div>
                                 </div>
                             </div>
                         </div>
                         <div class="card-actions">
-                            @if ($item->status)
+                            @if ($item->user->status)
                                 <a href="#" class="btn-action" data-bs-toggle="fast-ajax" data-bs-target="{{ route('admin.robot.update', [$item->id]) }}" data-bs-method="PUT" data-bs-key="status" data-bs-value="0">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler text-danger icon-tabler-player-stop-filled" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -58,9 +58,9 @@
                                 <div class="text-muted">
                                     {{-- 无法更改，Telegram未开放接口 --}}
                                     {{-- <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setChatPhoto" data-bs-action="{{ route('admin.robot.setChatPhoto', [$item->id]) }}">头像</a> --}}
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyName" data-bs-action="{{ route('admin.robot.setMyName', [$item->id]) }}" title="{{ $item->name }}">名称</a>
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyDescription" data-bs-action="{{ route('admin.robot.setMyDescription', [$item->id]) }}" title="{{ $item->description }}">描述</a>
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyShortDescription" data-bs-action="{{ route('admin.robot.setMyShortDescription', [$item->id]) }}" title="{{ $item->short_description }}">简单描述</a>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyName" data-bs-action="{{ route('admin.robot.setMyName', [$item->id]) }}" title="{{ $item->user->name }}">名称</a>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyDescription" data-bs-action="{{ route('admin.robot.setMyDescription', [$item->id]) }}" title="{{ $item->user->description }}">描述</a>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyShortDescription" data-bs-action="{{ route('admin.robot.setMyShortDescription', [$item->id]) }}" title="{{ $item->user->short_description }}">简单描述</a>
                                 </div>
                             </div>
                             <div class="col-sm-6 mt-3">
@@ -75,6 +75,21 @@
                                 <div>
                                     <a href="#" class="btn-getWebhookInfo" data-url="{{ route('admin.robot.getWebhookInfo', [$item->id]) }}" data-seturl="{{ route('admin.robot.setWebhook', [$item->id]) }}">查看</a>
                                     <a href="#" data-bs-toggle="fast-ajax" data-bs-target="{{ route('admin.robot.deleteWebhook', [$item->id]) }}" data-bs-method="delete">清除</a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 mt-3">
+                                <h4 class="text-black-50 user-select-none">私聊</h4>
+                                <div>
+                                    <a href="#" class="btn-keyboard" data-callbacks="{{ Js::encode($item->private_keyboard) }}" data-url="{{ route('admin.robot.update', [$item->id]) }}" data-field="private_keyboard">键盘</a>
+                                    <a href="#" class="btn-callbacks" data-callbacks="{{ Js::encode($item->private) }}" data-url="{{ route('admin.robot.update', [$item->id]) }}" data-field="private">回调</a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 mt-3">
+                                <h4 class="text-black-50 user-select-none">群聊回调</h4>
+                                <div>
+                                    <a href="#" class="btn-callbacks" data-callbacks="{{ Js::encode($item->group_default) }}" data-url="{{ route('admin.robot.update', [$item->id]) }}" data-field="group_default">普通人</a>
+                                    <a href="#" class="btn-callbacks" data-callbacks="{{ Js::encode($item->group_operator) }}" data-url="{{ route('admin.robot.update', [$item->id]) }}" data-field="group_operator">操作员</a>
+                                    <a href="#" class="btn-callbacks" data-callbacks="{{ Js::encode($item->group_administrator) }}" data-url="{{ route('admin.robot.update', [$item->id]) }}" data-field="group_administrator">管理员</a>
                                 </div>
                             </div>
                         </div>
@@ -137,17 +152,53 @@
 
     <x-modals.simple id="modal-getWebhookInfo" title="Webhook详情">
         <div>
-            <input type="text" class="form-control form-param" name="url" placeholder="url" />
+            <input type="text" list="hooks" class="form-control form-param" name="url" placeholder="url" />
+            <datalist id="hooks">
+                @foreach (config('telegram.hooks') ?? [] as $hook)
+                <option value="{{ $hook }}"></option>
+                @endforeach
+            </datalist>
+        </div>
+    </x-modals.simple>
+
+    <x-modals.simple id="modal-keyboard" title="键盘设置" method="PUT">
+        <input type="hidden" name="field" />
+        <div class="input-group mb-3">
+            <select class="form-select">
+                @foreach (config('telegram.callbacks') ?? [] as $callKey => $callback)
+                <option value="{{ $callKey }}">{{ $callKey }}</option>
+                @endforeach
+            </select>
+            <button type="button" class="btn btn-keyboard-add">添加</button>
+        </div>
+        <textarea class="form-control" name="callbacks" rows="10"></textarea>
+    </x-modals.simple>
+
+    <x-modals.simple id="modal-callbacks" title="回调列表" method="PUT">
+        <input type="hidden" name="field" />
+        <div class="form-selectgroup">
+            @foreach (config('telegram.callbacks') ?? [] as $callKey => $callback)
+                <label class="form-selectgroup-item">
+                    <input type="checkbox" name="callbacks[]" value="{{ $callKey }}" class="form-selectgroup-input" />
+                    <span class="form-selectgroup-label">{{ $callKey }}</span>
+                </label>
+            @endforeach
         </div>
     </x-modals.simple>
 
     <x-slot:script>
         <script>
+            let split = '###___###';
+
             $(function(){
                 // 查看指令模态框
                 var getMyCommandsModal = new bootstrap.Modal(document.getElementById('modal-getMyCommands'));
                 // 查看Webhook模态框
                 var getWebhookInfoModal = new bootstrap.Modal(document.getElementById('modal-getWebhookInfo'));
+                // 键盘模态框
+                var keyboardModal = new bootstrap.Modal(document.getElementById('modal-keyboard'));
+                // 回调模态框
+                var callbackModal = new bootstrap.Modal(document.getElementById('modal-callbacks'));
 
                 // 查看指令
                 $('.btn-getMyCommands').on('click', function(){
@@ -161,7 +212,6 @@
                         }
                     }, $btn);
                 });
-
                 // 查看Webhook
                 $('.btn-getWebhookInfo').on('click', function(){
                     $btn = $(this);
@@ -174,9 +224,70 @@
                         }
                     }, $btn);
                 });
+
+                // 查看键盘
+                $('.btn-keyboard').on('click', function(){
+                    $btn = $(this);
+
+                    // 获取参数
+                    let url = $btn.data('url');
+                    let callbacks = $btn.data('callbacks');
+                    let field = $btn.data('field');
+
+                    // 模态框设置
+                    $('#modal-keyboard').parents('form').attr('action', url);
+                    $('#modal-keyboard input[name="field"]').val(field);
+
+                    // 整理回调
+                    console.log(callbacks);
+                    if (!callbacks || callbacks == 'null') {
+                        callbacks = [];
+                    }
+                    let val = '';
+                    for (let i = 0; i < callbacks.length; i++) {
+                        for (let j = 0; j < callbacks[i].length; j++) {
+                            val += callbacks[i][j].text + split;
+                        }
+                        val += "\n";
+                    }
+                    $('#modal-keyboard textarea').val(val);
+                    
+                    // 显示模态框
+                    keyboardModal.show();
+                });
+
+                // 键盘添加
+                $('.btn-keyboard-add').on('click', function(){
+                    $('#modal-keyboard textarea').val($('#modal-keyboard textarea').val() + split + $('#modal-keyboard select').val());
+                });
+
+                // 查看回调
+                $('.btn-callbacks').on('click', function(){
+                    $btn = $(this);
+
+                    // 获取参数
+                    let url = $btn.data('url');
+                    let callbacks = $btn.data('callbacks');
+                    let field = $btn.data('field');
+
+                    // 模态框设置
+                    $('#modal-callbacks').parents('form').attr('action', url);
+                    $('#modal-callbacks input[name="field"]').val(field);
+
+                    // 整理回调
+                    console.log(callbacks);
+                    if (!callbacks || callbacks == 'null') {
+                        callbacks = [];
+                    }
+                    $('#modal-callbacks .form-selectgroup-input').each(function(idx, ele){
+                        $(ele).prop('checked', callbacks.indexOf($(ele).val()) != -1);
+                    });
+                    
+                    // 显示模态框
+                    callbackModal.show();
+                });
             });
         </script>
     </x-slot:script>
 
 </x-layouts.admin>
-

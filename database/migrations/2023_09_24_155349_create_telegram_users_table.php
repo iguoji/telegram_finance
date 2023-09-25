@@ -21,12 +21,12 @@ return new class extends Migration
             $table->string('last_name')->nullable();
 
             $table->string('username')->nullable()->unique();
-            $table->string('token')->nullable()->unique();
             $table->string('photo')->nullable();
             $table->text('description')->nullable();
             $table->string('short_description')->nullable();
-            $table->text('commands')->nullable();
-            $table->text('webhook')->nullable();
+
+            $table->timestamp('vip_at')->nullable();
+            $table->timestamp('trial_at')->nullable();
 
             $table->string('language_code')->nullable();
             $table->boolean('is_premium')->default(false)->nullable();

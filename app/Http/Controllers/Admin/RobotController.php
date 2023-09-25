@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Robot\StoreRequest;
 use App\Http\Requests\Admin\Robot\UpdateRequest;
+use App\Models\TelegramRobot;
 use App\Models\TelegramUser;
 use Illuminate\Http\Request;
 use App\Telegram\Robot;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class RobotController extends Controller
 {
@@ -16,10 +20,10 @@ class RobotController extends Controller
      */
     public function index()
     {
-        $users = TelegramUser::where('is_bot', 1)->orderBy('created_at')->paginate();
+        $robots = TelegramRobot::orderBy('created_at')->paginate();
 
         return view('admin.robot.index', [
-            'users'    =>  $users
+            'robots'    =>  $robots
         ]);
     }
 
@@ -37,53 +41,61 @@ class RobotController extends Controller
     public function store(StoreRequest $request)
     {
         // 已经存在
-        $user = TelegramUser::where('token', $request->token)->first();
-        if (!empty($user)) {
+        $robot = TelegramRobot::where('token', $request->token)->first();
+        if (!empty($robot)) {
             return error('很抱歉、该机器人已经存在！');
         }
 
         // 查询机器人
-        $robot = new Robot();
-        $robot->token = $request->token;
-        $me = $robot->getMe();
+        $robotApi = new Robot($request->token);
+        $me = $robotApi->getMe();
 
         // 查询聊天
-        $chat = $robot->getChat([
+        $chat = $robotApi->getChat([
             'chat_id'   =>  $me['id'],
         ]);
 
         // 查询头像
         if (!empty($chat['photo'])) {
-            $photo = $robot->getFile([
-                'file_id'   =>  $chat['photo']['big_file_id']
-            ]);
+            // $photo = $robotApi->getFile([
+            //     'file_id'   =>  $chat['photo']['big_file_id']
+            // ]);
             // var_dump('https://127.0.0.1:8081/file/bot' . $robot->token . '/' . $photo['file_path']);
+            // Storage::ur
         }
 
         // 获取描述
-        $desc = $robot->getMyDescription();
+        $desc = $robotApi->getMyDescription();
         // 获取描述
-        $sdesc = $robot->getMyShortDescription();
+        $sdesc = $robotApi->getMyShortDescription();
         // 获取命令
-        $commands = $robot->getMyCommands();
+        $commands = $robotApi->getMyCommands();
         // 获取HOOK
-        $webhook = $robot->getWebhookInfo();
+        $webhook = $robotApi->getWebhookInfo();
 
-        // 机器人对象
-        $user = new TelegramUser($me);
-        $user->status = 1;
-        $user->token = $request->token;
-        if (!empty($photo)) {
-            $user->photo = $photo['file_path'];
-        }
-        $user->description = $desc['description'];
-        $user->short_description = $sdesc['short_description'];
-        $user->commands = $commands;
-        $user->webhook = $webhook;
-        $user->saveOrFail();
+        // 事务处理
+        DB::transaction(function() use($me, $desc, $sdesc, $request, $commands, $webhook){
+            // 用户对象
+            $user = new TelegramUser($me);
+            $user->description = $desc['description'];
+            $user->short_description = $sdesc['short_description'];
+            $user->saveOrFail();
+
+            // 机器人对象
+            $robot = new TelegramRobot();
+            $robot->id = $me['id'];
+            $robot->token = $request->token;
+            $robot->commands = $commands;
+            $robot->webhook = $webhook;
+            $robot->saveOrFail();
+
+            // 更新缓存
+            Cache::put('telegram:robot:' . $me['id'], $robot);
+        });
+        
 
         // 返回结果
-        return success($user);
+        return success();
     }
 
     /**
@@ -99,28 +111,7 @@ class RobotController extends Controller
      */
     public function refresh(string $id)
     {
-        // 不存在
-        // $robot = Robot::where('rid', $id)->first();
-        // if (empty($robot)) {
-        //     return error('很抱歉、该机器人不存在！');
-        // }
-
-        // // 查询机器人
-        // $telegramRobot = new TelegramRobot();
-        // $telegramRobot->token = $robot->token;
-        // $data = $telegramRobot->getMe();
-
-        // // 机器人对象
-        // $robot->first_name = $data['first_name'];
-        // $robot->last_name = $data['last_name'] ?? null;
-        // $robot->username = $data['username'];
-        // $robot->can_join_groups = $data['can_join_groups'];
-        // $robot->can_read_all_group_messages = $data['can_read_all_group_messages'];
-        // $robot->supports_inline_queries = $data['supports_inline_queries'];
-        // $robot->saveOrFail();
-
-        // // 返回结果
-        // return success($data);
+        
     }
 
     /**
@@ -136,40 +127,52 @@ class RobotController extends Controller
      */
     public function update(UpdateRequest $request, string $id)
     {
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
-
-        // 状态
-        // if ($request->has('status')) {
-        //     // 设置状态
-        //     $robot->status = $request->status;
-
-        //     // Hook
-        //     $telegramRobot = new TelegramRobot();
-        //     $telegramRobot->token = $robot->token;
-
-        //     // 根据状态来调用接口
-        //     if ($robot->status == 1 || $robot->status == '1') {
-        //         // 启用
-        //         $telegramRobot->setWebhook([
-        //             'url'           =>  route('telegram.hook'),
-        //             'secret_token'  =>  $robot->username,
-        //         ]);
-        //     } else {
-        //         // 停用
-        //         $telegramRobot->deleteWebhook([
-        //             'url'           =>  route('telegram.hook'),
-        //             'secret_token'  =>  $robot->username,
-        //         ]);
-        //     }
-        // }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 更新数据
-        $user->status = $request->status;
-        $user->saveOrFail();
+        if ($request->has('status')) {
+            // 更新字段
+            $robot->user->status = $request->status;
+            // 保存到数据库
+            $robot->user->saveOrFail();
+        } else {
+            if ($request->has('field')) {
+                // 如果是键盘
+                if ($request->field == 'private_keyboard') {
+                    // 原始数据
+                    $callbacks = trim($request->input('callbacks', ''));
+                    // 按行分割
+                    $rows = explode("\n", $callbacks);
+                    // 循环整理
+                    $keyboard = [];
+                    foreach ($rows as $row) {
+                        // 单个切分
+                        $cols = explode('###___###', $row);
+                        $keyboardRow = [];
+                        foreach ($cols as $col) {
+                            $col = trim($col);
+                            if (strlen($col)) {
+                                $keyboardRow[] = ['text' => $col];
+                            }
+                        }
+                        if (!empty($keyboardRow)) {
+                            $keyboard[] = $keyboardRow;
+                        }
+                    }
+                    // 保存到模型
+                    $robot->private_keyboard = $keyboard;
+                } else {
+                    // 保存到模型
+                    $robot[$request->field] = $request->input('callbacks', []);
+                }
+            }
+            // 保存到数据库
+            $robot->saveOrFail();
+        }
+
+        // 更新缓存
+        Cache::put('telegram:robot:' . $id, $robot);
 
         // 返回结果
         return success();
@@ -185,25 +188,22 @@ class RobotController extends Controller
             'photo'      =>  ['required', 'image'],
         ]);
 
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $robot->setChatPhoto([
+        $robotApi = new Robot($robot->token);
+        $robotApi->setChatPhoto([
             'chat_id'       =>  $id,
             'photo'         =>  $request->photo,
         ]);
 
         // 修改信息
-        $user->photo = $request->photo->name;
-        $user->saveOrFail();
+        $robot->user->photo = $request->photo->name;
+        $robot->user->saveOrFail();
 
         // 修改成功
-        return success($user);
+        return success();
     }
 
     /**
@@ -216,24 +216,24 @@ class RobotController extends Controller
             'name'      =>  ['required', 'max:64'],
         ]);
 
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $robot->setMyName([
+        $robotApi = new Robot($robot->token);
+        $robotApi->setMyName([
             'name'      =>  $request->name
         ]);
 
         // 修改信息
-        $user->first_name = $request->name;
-        $user->saveOrFail();
+        $robot->user->first_name = $request->name;
+        $robot->user->saveOrFail();
+
+        // 更新缓存
+        Cache::put('telegram:robot:' . $id, $robot);
 
         // 修改成功
-        return success($user);
+        return success();
     }
 
     /**
@@ -246,24 +246,24 @@ class RobotController extends Controller
             'description'      =>  ['required', 'max:512'],
         ]);
 
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $robot->setMyDescription([
+        $robotApi = new Robot($robot->token);
+        $robotApi->setMyDescription([
             'description'      =>  $request->description
         ]);
 
         // 修改信息
-        $user->description = $request->description;
-        $user->saveOrFail();
+        $robot->user->description = $request->description;
+        $robot->user->saveOrFail();
+
+        // 更新缓存
+        Cache::put('telegram:robot:' . $id, $robot);
 
         // 修改成功
-        return success($user);
+        return success();
     }
 
     /**
@@ -276,24 +276,24 @@ class RobotController extends Controller
             'short_description'      =>  ['required', 'max:120'],
         ]);
 
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $robot->setMyShortDescription([
+        $robotApi = new Robot($robot->token);
+        $robotApi->setMyShortDescription([
             'short_description'      =>  $request->short_description
         ]);
 
         // 修改信息
-        $user->short_description = $request->short_description;
-        $user->saveOrFail();
+        $robot->user->short_description = $request->short_description;
+        $robot->user->saveOrFail();
+
+        // 更新缓存
+        Cache::put('telegram:robot:' . $id, $robot);
 
         // 修改成功
-        return success($user);
+        return success();
     }
 
     /**
@@ -301,19 +301,19 @@ class RobotController extends Controller
      */
     public function getMyCommands(Request $request, string $id)
     {
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $res = $robot->getMyCommands();
+        $robotApi = new Robot($robot->token);
+        $res = $robotApi->getMyCommands();
 
         // 修改信息
-        $user->commands = $res;
-        $user->saveOrFail();
+        $robot->commands = $res;
+        $robot->saveOrFail();
+
+        // 更新缓存
+        Cache::put('telegram:robot:' . $id, $robot);
 
         // 修改成功
         return success($res);
@@ -328,15 +328,13 @@ class RobotController extends Controller
         $request->validate([
             'commands'      =>  ['required'],
         ]);
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $res = $robot->setMyCommands([
+        $robotApi = new Robot($robot->token);
+        $res = $robotApi->setMyCommands([
             'commands'      =>  $request->commands,
         ]);
 
@@ -349,15 +347,12 @@ class RobotController extends Controller
      */
     public function deleteMyCommands(Request $request, string $id)
     {
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $res = $robot->deleteMyCommands();
+        $robotApi = new Robot($robot->token);
+        $res = $robotApi->deleteMyCommands();
 
         // 修改成功
         return success($res);
@@ -368,19 +363,19 @@ class RobotController extends Controller
      */
     public function getWebhookInfo(Request $request, string $id)
     {
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $res = $robot->getWebhookInfo();
+        $robotApi = new Robot($robot->token);
+        $res = $robotApi->getWebhookInfo();
 
         // 修改信息
-        $user->webhook = $res;
-        $user->saveOrFail();
+        $robot->webhook = $res;
+        $robot->saveOrFail();
+
+        // 更新缓存
+        Cache::put('telegram:robot:' . $id, $robot);
 
         // 修改成功
         return success($res);
@@ -396,17 +391,14 @@ class RobotController extends Controller
             'url'       =>  ['required'],
         ]);
 
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $res = $robot->setWebhook([
+        $robotApi = new Robot($robot->token);
+        $res = $robotApi->setWebhook([
             'url'               =>  $request->url,
-            'secret_token'      =>  $user->id . '___' . md5($user->token),
+            'secret_token'      =>  $robot->id . '___' . md5($robot->token),
         ]);
 
         // 修改成功
@@ -418,15 +410,12 @@ class RobotController extends Controller
      */
     public function deleteWebhook(Request $request, string $id)
     {
-        // 不存在
-        $user = TelegramUser::where('id', $id)->where('is_bot', 1)->first();
-        if (empty($user)) {
-            return error('很抱歉、该机器人不存在！');
-        }
+        // 查询机器人
+        $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
-        $robot = new Robot($user->token);
-        $res = $robot->deleteWebhook();
+        $robotApi = new Robot($robot->token);
+        $res = $robotApi->deleteWebhook();
 
         // 修改成功
         return success($res);

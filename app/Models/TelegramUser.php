@@ -23,10 +23,13 @@ class TelegramUser extends Model
      */
     public $fillable = [
         'id',
+
         'status',
         'is_bot',
+
         'first_name',
         'last_name',
+
         'username',
         'token',
         'photo',
@@ -34,6 +37,13 @@ class TelegramUser extends Model
         'short_description',
         'commands',
         'webhook',
+
+        'private',
+        'private_keyboard',
+        'group_default',
+        'group_operator',
+        'group_administrator',
+
         'language_code',
         'is_premium',
         'added_to_attachment_menu',
@@ -43,20 +53,20 @@ class TelegramUser extends Model
     ];
 
     /**
-     * 类型转换
-     */
-    protected $casts = [
-        'commands'  =>  'array',
-        'webhook'   =>  'array',
-    ];
-
-    /**
      * 完整名称
      */
-    protected function name() : Attribute
+    public function name() : Attribute
     {
         return Attribute::make(
             get: fn(mixed $value, array $attributes) => ($attributes['last_name'] ?? '') . $attributes['first_name'],
         );
+    }
+
+    /**
+     * 对应的机器人
+     */
+    public function robot()
+    {
+        return $this->hasOne(TelegramRobot::class, 'id', 'id');
     }
 }

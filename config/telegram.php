@@ -1,24 +1,89 @@
 <?php
 
-use App\Telegram\Callbacks\CancelKeyboardCallback;
-use App\Telegram\Callbacks\ExpiresCallback;
-use App\Telegram\Callbacks\HelpHowSetAdminCallback;
-use App\Telegram\Callbacks\HelpHowSetOperatorCallback;
-use App\Telegram\Callbacks\PlaceOrder15DayCallback;
-use App\Telegram\Callbacks\SelfPaymentCallback;
-use App\Telegram\Callbacks\SwitchComputerCallback;
-use App\Telegram\Callbacks\TrialCallback;
-use App\Telegram\Commands\AllBillCommand;
-use App\Telegram\Commands\BillCommand;
-use App\Telegram\Commands\HelpCommand;
-use App\Telegram\Commands\StartCommand;
+use App\Telegram\Callbacks\CancelKeyboard;
+use App\Telegram\Callbacks\Expires;
+use App\Telegram\Callbacks\HelpHowSetAdmin;
+use App\Telegram\Callbacks\HelpHowSetOperator;
+use App\Telegram\Callbacks\PlaceOrder15Day;
+use App\Telegram\Callbacks\SelfPayment;
+use App\Telegram\Callbacks\SwitchComputer;
+use App\Telegram\Callbacks\Trial;
+use App\Telegram\Callbacks\AllBill;
+use App\Telegram\Callbacks\Bill;
+use App\Telegram\Callbacks\Help;
+use App\Telegram\Callbacks\Start;
 
 return [
 
-    // 服务器列表
-    'servers'       =>  [
+    // 钩子列表
+    'hooks'       =>  [
         'https://www.zidongjizhang.com/api/telegram/hook',
         'https://nl.zidongjizhang.com/api/telegram/hook',
+    ],
+
+    // 可用回调
+    'callbacks'                     =>  [
+        '/start'            =>  Start::class,
+        '开始'              =>  Start::class,
+
+        '/help'             =>  Help::class,
+        '帮助'               =>  Help::class,
+        '帮助文档'           =>  Help::class,
+        '详细使用说明书'      =>  Help::class,
+
+        '如何设置权限人'      =>  HelpHowSetAdmin::class,
+        '如何设置群内操作人'  =>  HelpHowSetOperator::class, 
+        '开启/关闭计算功能'   =>  SwitchComputer::class,
+
+        '/bill'             =>  Bill::class,
+        '账单'               =>  Bill::class,
+        '显示账单'           =>  Bill::class,
+
+        '/allbill'          =>  AllBill::class,
+        '完整账单'           =>  AllBill::class,
+        '显示完整账单'       =>  AllBill::class,
+
+        'trial'             =>  Trial::class,
+        '试用'               =>  Trial::class,
+        '立即试用'           =>  Trial::class,
+
+        '自助续费'           =>  SelfPayment::class,
+        'PlaceOrder15Day'   =>  PlaceOrder15Day::class,
+        'PlaceOrder1Month'   =>  PlaceOrder15Day::class,
+        'PlaceOrder3Month'   =>  PlaceOrder15Day::class,
+        '到期时间'            =>  Expires::class,
+
+        '下发'               =>  '',
+        '+'                 =>  '',
+        '-'                 =>  '',
+        '*'                 =>  '',
+        '/'                 =>  '',
+
+        '取消键盘'          =>   CancelKeyboard::class,
+    ],
+
+    // 回调参数
+    'parameters'                    =>  [
+        '+'                         =>  [
+            'pre'   =>  true,
+            'suf'   =>  true,
+        ],
+        '-'                         =>  [
+            'pre'   =>  true,
+            'suf'   =>  true,
+        ],
+        '*'                         =>  [
+            'pre'   =>  true,
+            'suf'   =>  true,
+        ],
+        '/'                         =>  [
+            'pre'   =>  true,
+            'suf'   =>  true,
+        ],
+        '下发'                      =>  [
+            'pre'   =>  false,
+            'suf'   =>  true,
+        ],
     ],
 
     // 机器人列表
@@ -33,7 +98,7 @@ return [
             'username'              =>  'zidongjizhang_bot',
 
             // 试用时间 单位：秒
-            'trial_expire'          =>  3600 * 3,
+            'trial_duration'          =>  3600 * 3,
 
             // USDT
             'trc20'                 =>  'TY8jNABVoReroGTuPhyb9RYhfNtyB3bb1p',
@@ -46,49 +111,12 @@ return [
 
             // 指令
             'commands'          =>  [
-                '/help'             =>  HelpCommand::class,
-                '/bill'             =>  BillCommand::class,
-                '/allbill'          =>  AllBillCommand::class,
+                '/help'             =>  Help::class,
+                '/bill'             =>  Bill::class,
+                '/allbill'          =>  AllBill::class,
             ],
 
-            // 匹配，*结尾表示有参数
-            'matches'               =>  [
-                '/start'            =>  StartCommand::class,
-                '开始'              =>  StartCommand::class,
-
-                '/help'             =>  HelpCommand::class,
-                '帮助'               =>  HelpCommand::class,
-                '帮助文档'           =>  HelpCommand::class,
-                '详细使用说明书'      =>  HelpCommand::class,
-
-                '如何设置权限人'      =>  HelpHowSetAdminCallback::class,
-                '如何设置群内操作人'  =>  HelpHowSetOperatorCallback::class, 
-                '开启/关闭计算功能'   =>  SwitchComputerCallback::class,
-
-                '/bill'             =>  BillCommand::class,
-                '账单'               =>  BillCommand::class,
-                '显示账单'           =>  BillCommand::class,
-
-                '/allbill'          =>  AllBillCommand::class,
-                '完整账单'           =>  AllBillCommand::class,
-                '显示完整账单'       =>  AllBillCommand::class,
-
-                'trial'             =>  TrialCallback::class,
-                '试用'               =>  TrialCallback::class,
-                '立即试用'           =>  TrialCallback::class,
-
-                '自助续费'           =>  SelfPaymentCallback::class,
-                'PlaceOrder15Day'   =>  PlaceOrder15DayCallback::class,
-                'PlaceOrder1Month'   =>  PlaceOrder15DayCallback::class,
-                'PlaceOrder3Month'   =>  PlaceOrder15DayCallback::class,
-                '到期时间'            =>  ExpiresCallback::class,
-
-                '+*'                 =>  '',
-                '下发*'               =>  '',
-                '-*'                 =>  '',
-
-                '取消键盘'          =>   CancelKeyboardCallback::class,
-            ],
+            
 
             // 私聊
             'private'               =>  [

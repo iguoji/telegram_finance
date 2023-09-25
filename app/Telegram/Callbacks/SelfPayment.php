@@ -2,21 +2,17 @@
 
 namespace App\Telegram\Callbacks;
 
-use App\Models\User;
 use App\Telegram\Callback;
 use Illuminate\Support\Facades\Cache;
 
-class SelfPaymentCallback extends Callback
+class SelfPayment extends Callback
 {
     /**
      * 执行命令
      */
     public function execute(string $argument = null) : mixed
     {
-        // 准备内容
-        $context = [
-            'chat_id'       =>  $this->getUpdate()->getChatId(),
-            'text'          =>  '自助续费暂只支持USDT的erc或trc通道',
+        return $this->send('自助续费暂只支持USDT的erc或trc通道', [
             'reply_markup'  =>  [
                 'inline_keyboard'   =>  [
                     [
@@ -30,9 +26,6 @@ class SelfPaymentCallback extends Callback
                     ],
                 ],
             ],
-        ];
-
-        // 发送消息
-        return $this->robot->sendMessage($context);
+        ]);
     }
 }

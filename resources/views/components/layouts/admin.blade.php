@@ -217,10 +217,12 @@
             if (!options.data.has('_token')) {
                 options.data.append('_token', '{{ csrf_token() }}');
             }
+
+            console.log(options);
             
             // 执行请求
             $.ajax({
-                method: (options.method == 'get' || options.method == 'GET' ? options.method : 'POST'),
+                method: (options.method == 'get' || options.method == 'GET' ? 'GET' : 'POST'),
                 url: options.url,
                 data: options.data,
                 processData: false,
@@ -241,7 +243,7 @@
                     }
                 },
                 error: options.error ? options.error : function(req, status, ex) {
-                    if (req.status == 422) {
+                    if (req.status == 400|| req.status == 422 || req.status == 500) {
                         toastr.warning(req.responseJSON.message);
                     } else {
                         toastr.error(req.status + ' - ' + req.statusText);

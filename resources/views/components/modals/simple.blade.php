@@ -23,36 +23,10 @@
 <script>
 // 简单模态框的表单提交事件
 function onSimpleModalFormSubmit(target) {
-    $(target).addClass('btn-loading');
-    let data = new FormData(target.form);
-    $.ajax({
-        method: target.form.method,
+    ajax({
+        method: $(target.form).attr('method'),
         url: target.form.action,
-        data: data,
-        processData: false,
-        contentType: false,
-        success: function(res){
-            if (res) {
-                if (res.code == 200) {
-                    window.location.reload();
-                } else {
-                    toastr.warning(res.message);
-                }
-            } else {
-                console.log('success', res);
-            }
-        },
-        error: function(req, status, ex) {
-            if (req.status == 400 || req.status == 422) {
-                toastr.warning(req.responseJSON.message);
-            } else {
-                console.log(req);
-                toastr.error(req.status + ' - ' + req.statusText);
-            }
-        },
-        complete: function(){
-            $(target).removeClass('btn-loading');
-        }
-    });
+        data: new FormData(target.form),
+    }, $(target));
 }
 </script>
