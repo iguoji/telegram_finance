@@ -61,22 +61,22 @@ class Robot
             // 直接相等
             if ($abstract == $text) {
                 // 返回结果
-                return [$abstract, $class, false];
+                return [$abstract, $class, null];
             }
             // 支持参数
             if (isset($parameters[$abstract])) {
                 $param = $parameters[$abstract];
-                // 支持前缀参数，并结尾相等
-                if (isset($param['pre']) && $param['pre'] && str_ends_with($text, $abstract)) {
-                    return [$abstract, $class, true];
+                // 支持前缀参数，并结尾相等，例如：参数 回调
+                if (isset($param['pre']) && $param['pre'] && isset($param['suf']) && !$param['suf'] && str_ends_with($text, $abstract)) {
+                    return [$abstract, $class, trim(mb_substr($text, 0, -mb_strlen($abstract)))];
                 }
                 // 支持后缀参数，并开头相等
-                if (isset($param['suf']) && $param['suf'] && str_starts_with($text, $abstract)) {
-                    return [$abstract, $class, true];
+                if (isset($param['pre']) && !$param['pre'] && isset($param['suf']) && $param['suf'] && str_starts_with($text, $abstract)) {
+                    return [$abstract, $class, trim(mb_substr($text, mb_strlen($abstract)))];
                 }
                 // 前后缀都支持，并存在其中
                 if (isset($param['pre']) && $param['pre'] && isset($param['suf']) && $param['suf'] && str_contains($text, $abstract)) {
-                    return [$abstract, $class, true];
+                    return [$abstract, $class, $text];
                 }
             }
         }
@@ -100,7 +100,7 @@ class Robot
             // 文本内容
             $text = $update->getText();
             // 匹配模式
-            list($callback, $callbackClass, $hasArgument) = $this->match($text);
+            list($callback, $callbackClass, $argument) = $this->match($text);
             if ($callback && $callbackClass) {
                 // 私聊
                 if ($update->getChatType() == Chat::TYPE_PRIVATE) {
@@ -108,11 +108,6 @@ class Robot
                     $matches = $this->robot->private;
                     // 存在使用该命令的资格
                     if (in_array($callback, $matches)) {
-                        // 解析参数
-                        $argument = null;
-                        // if ($hasArgument) {
-                        //     $argument = mb_substr($text, mb_strlen($command));
-                        // }
                         // 执行命令
                         return (new $callbackClass($this, $update))->handle($argument);
                     }

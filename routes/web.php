@@ -25,23 +25,43 @@ Route::prefix('admin')->name('admin.')->group(function(){
     Route::get('/login', [App\Http\Controllers\Admin\IndexController::class, 'index'])->name('login');
     Route::get('/logout', [App\Http\Controllers\Admin\IndexController::class, 'index'])->name('logout');
 
+    // 订单
+    Route::prefix('telegram/user')->name('telegram.user.')->controller(App\Http\Controllers\Admin\TelegramUserController::class)->group(function(){
+        // 列表
+        Route::get('/', 'index')->name('index');
+    });
+
+    // 订单
+    Route::prefix('order')->name('order.')->controller(App\Http\Controllers\Admin\OrderController::class)->group(function(){
+        // 列表
+        Route::get('/', 'index')->name('index');
+        // 状态
+        Route::post('/{order}/status/{status}', 'changeStatus')->name('changeStatus');
+    });
+
     // 机器人
     Route::resource('robot', App\Http\Controllers\Admin\RobotController::class);
-    Route::post('/robot/refresh/{id}', [App\Http\Controllers\Admin\RobotController::class, 'refresh'])->name('robot.refresh');
+    Route::post('/robot/refresh/{robot}', [App\Http\Controllers\Admin\RobotController::class, 'refresh'])->name('robot.refresh');
     Route::prefix('robot')->name('robot.')->controller(App\Http\Controllers\Admin\RobotController::class)->group(function(){
-        Route::post('/{id}/setChatPhoto', 'setChatPhoto')->name('setChatPhoto');
-        Route::post('/{id}/setMyName', 'setMyName')->name('setMyName');
-        Route::post('/{id}/setMyDescription', 'setMyDescription')->name('setMyDescription');
-        Route::post('/{id}/setMyShortDescription', 'setMyShortDescription')->name('setMyShortDescription');
+        // 基本信息
+        Route::post('/{robot}/setChatPhoto', 'setChatPhoto')->name('setChatPhoto');
+        Route::post('/{robot}/setMyName', 'setMyName')->name('setMyName');
+        Route::post('/{robot}/setMyDescription', 'setMyDescription')->name('setMyDescription');
+        Route::post('/{robot}/setMyShortDescription', 'setMyShortDescription')->name('setMyShortDescription');
 
-        Route::post('/{id}/setWebhook', 'setWebhook')->name('setWebhook');
-        Route::delete('/{id}/deleteWebhook', 'deleteWebhook')->name('deleteWebhook');
-        Route::post('/{id}/getWebhookInfo', 'getWebhookInfo')->name('getWebhookInfo');
+        // Webhook
+        Route::post('/{robot}/setWebhook', 'setWebhook')->name('setWebhook');
+        Route::delete('/{robot}/deleteWebhook', 'deleteWebhook')->name('deleteWebhook');
+        Route::post('/{robot}/getWebhookInfo', 'getWebhookInfo')->name('getWebhookInfo');
 
-        Route::post('/{id}/setMyCommands', 'setMyCommands')->name('setMyCommands');
-        Route::delete('/{id}/deleteMyCommands', 'deleteMyCommands')->name('deleteMyCommands');
-        Route::post('/{id}/getMyCommands', 'getMyCommands')->name('getMyCommands');
+        // Commands
+        Route::post('/{robot}/setMyCommands', 'setMyCommands')->name('setMyCommands');
+        Route::delete('/{robot}/deleteMyCommands', 'deleteMyCommands')->name('deleteMyCommands');
+        Route::post('/{robot}/getMyCommands', 'getMyCommands')->name('getMyCommands');
     });
+
+    // 定价
+    Route::apiResource('robot.price', App\Http\Controllers\Admin\PriceController::class);
 
     /**
      * 基础权限

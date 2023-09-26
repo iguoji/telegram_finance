@@ -166,7 +166,11 @@ class RobotController extends Controller
                     // 保存到模型
                     $robot[$request->field] = $request->input('callbacks', []);
                 }
+            } else {
+                // 所有提交都保存
+                $robot->fill($request->all());
             }
+
             // 保存到数据库
             $robot->saveOrFail();
         }

@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('type');
             $table->string('address');
             $table->string('label');
-            $table->decimal('number', 10);
-            $table->string('callback');
+            $table->decimal('number', 12, 4);
+            $table->string('callback')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

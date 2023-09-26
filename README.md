@@ -3,9 +3,16 @@
 ```bash
 composer install
 php artisan migrate
-php artisan telegram:hook
-php artisan telegram:command
+
+composer install --optimize-autoloader --no-dev
+
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+php artisan storage:link
 php artisan queue:work
+php artisan schedule:work
 
 ```
 ## 环境部署
@@ -165,10 +172,11 @@ server {
 
 ```conf
 [Unit]
-Description=Laravel Octane Server
+Description=Laravel Octane Service
 After=php8.1-fpm.service
 
 [Service]
+Type=forking
 ExecStart=php /home/wwwroot/telegram_finance/artisan octane:start
 ExecReload=php /home/wwwroot/telegram_finance/artisan octane:reload
 ExecStop=php /home/wwwroot/telegram_finance/artisan octane:stop
@@ -181,11 +189,28 @@ WantedBy=multi-user.target
 
 ```conf
 [Unit]
-Description=Laravel Queue Server
+Description=Laravel Queue Service
 After=octane.service
 
 [Service]
+Type=forking
 ExecStart=php /home/wwwroot/telegram_finance/artisan queue:work
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> vi /usr/lib/systemd/system/schedule.service
+
+```conf
+[Unit]
+Description=Laravel Schedule Service
+After=octane.service
+
+[Service]
+Type=forking
+ExecStartPre=cd /home/wwwroot/telegram_finance/
+ExecStart=php /home/wwwroot/telegram_finance/artisan schedule:work
 
 [Install]
 WantedBy=multi-user.target
@@ -217,93 +242,4 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 
 ```bash
 docker run -d -p 8081:8081 --name=telegram-bot-api --restart=always -v telegram-bot-api-data:/var/lib/telegram-bot-api -e TELEGRAM_API_ID=<api_id> -e TELEGRAM_API_HASH=<api-hash> aiogram/telegram-bot-api:latest
-```
-
-## Update Json
-
-- 私聊指令
-
-```json
-{
-	"update_id": 18761354,
-	"message": {
-		"message_id": 341,
-		"from": {
-			"id": 6352088817,
-			"is_bot": false,
-			"first_name": "日行一善",
-			"username": "emituofooo",
-			"language_code": "zh-hans"
-		},
-		"chat": {
-			"id": 6352088817,
-			"first_name": "日行一善",
-			"username": "emituofooo",
-			"type": "private"
-		},
-		"date": 1695295264,
-		"text": "/start",
-		"entities": [{
-			"offset": 0,
-			"length": 6,
-			"type": "bot_command"
-		}]
-	}
-}
-```
-
-- 私聊普通
-
-```json
-{
-	"update_id": 18761355,
-	"message": {
-		"message_id": 344,
-		"from": {
-			"id": 6352088817,
-			"is_bot": false,
-			"first_name": "日行一善",
-			"username": "emituofooo",
-			"language_code": "zh-hans"
-		},
-		"chat": {
-			"id": 6352088817,
-			"first_name": "日行一善",
-			"username": "emituofooo",
-			"type": "private"
-		},
-		"date": 1695295354,
-		"text": "hello"
-	}
-}
-```
-
-- 群聊指令
-
-```json
-{
-	"update_id": 18761356,
-	"message": {
-		"message_id": 50,
-		"from": {
-			"id": 6352088817,
-			"is_bot": false,
-			"first_name": "日行一善",
-			"username": "emituofooo",
-			"language_code": "zh-hans"
-		},
-		"chat": {
-			"id": -1001908192385,
-			"title": "日行一善 & 自动记账机器人",
-			"type": "supergroup"
-		},
-		"date": 1695295409,
-		"text": "/start",
-		"entities": [{
-			"offset": 0,
-			"length": 6,
-			"type": "bot_command"
-		}]
-	}
-}
 ```

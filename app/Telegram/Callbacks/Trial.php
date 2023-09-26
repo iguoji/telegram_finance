@@ -35,7 +35,7 @@ class Trial extends Callback
                 $user->trial_at = date('Y-m-d H:i:s', time() + $duration);
                 $user->saveOrFail();
                 // 更新缓存
-                Cache::forever('telegram:trial:' . $user->id, $user->trial_at);
+                Cache::forever('telegram:user:' . $user->id, $user);
                 // 发送消息
                 return $this->success($user->trial_at);
             } else {

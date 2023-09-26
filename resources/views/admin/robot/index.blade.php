@@ -15,7 +15,13 @@
                         <div>
                             <div class="row align-items-center">
                                 <div class="col-auto">
-                                    <span class="avatar"></span>
+                                    <span class="avatar">
+                                        @if ($item->user->status)
+                                            <span class="status-dot status-dot-animated status-green"></span>
+                                        @else
+                                            <span class="status-dot"></span>
+                                        @endif
+                                    </span>
                                 </div>
                                 <div class="col">
                                     <div class="card-title">{{ $item->user->name }}</div>
@@ -58,9 +64,16 @@
                                 <div class="text-muted">
                                     {{-- 无法更改，Telegram未开放接口 --}}
                                     {{-- <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setChatPhoto" data-bs-action="{{ route('admin.robot.setChatPhoto', [$item->id]) }}">头像</a> --}}
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyName" data-bs-action="{{ route('admin.robot.setMyName', [$item->id]) }}" title="{{ $item->user->name }}">名称</a>
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyDescription" data-bs-action="{{ route('admin.robot.setMyDescription', [$item->id]) }}" title="{{ $item->user->description }}">描述</a>
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyShortDescription" data-bs-action="{{ route('admin.robot.setMyShortDescription', [$item->id]) }}" title="{{ $item->user->short_description }}">简单描述</a>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyName" data-bs-action="{{ route('admin.robot.setMyName', [$item->id]) }}" data-bs-fill="{{ Js::encode(['name' => $item->user->name]) }}">名称</a>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyDescription" data-bs-action="{{ route('admin.robot.setMyDescription', [$item->id]) }}" data-bs-fill="{{ Js::encode(['description' => $item->user->description]) }}">描述</a>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-setMyShortDescription" data-bs-action="{{ route('admin.robot.setMyShortDescription', [$item->id]) }}" data-bs-fill="{{ Js::encode(['short_description' => $item->user->short_description]) }}">简单描述</a>
+                                </div>
+                            </div>
+                            <div class="col-lg-12 mt-3">
+                                <h4 class="text-black-50 user-select-none">价格</h4>
+                                <div class="text-muted">
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal-tiralDuration" data-bs-action="{{ route('admin.robot.update', [$item->id]) }}" data-bs-fill="{{ Js::encode(['trial_duration' => $item->trial_duration]) }}">可试用: {{ $item->trial_duration }} 秒</a>
+                                    <a href="#" class="btn-prices" data-url="{{ route('admin.robot.price.index', [$item->id]) }}" data-seturl="{{ route('admin.robot.price.store', [$item->id]) }}">定价</a>
                                 </div>
                             </div>
                             <div class="col-sm-6 mt-3">
@@ -134,14 +147,80 @@
 
     <x-modals.simple id="modal-setMyDescription" title="设置描述">
         <div>
-            <textarea class="form-control form-param" name="description" placeholder="请输入描述"></textarea>
+            <textarea rows="5" class="form-control form-param" name="description" placeholder="请输入描述"></textarea>
         </div>
     </x-modals.simple>
 
     <x-modals.simple id="modal-setMyShortDescription" title="设置简单描述">
         <div>
-            <textarea class="form-control form-param" name="short_description" placeholder="请输入简单的描述"></textarea>
+            <textarea rows="5" class="form-control form-param" name="short_description" placeholder="请输入简单的描述"></textarea>
         </div>
+    </x-modals.simple>
+
+    <x-modals.simple id="modal-tiralDuration" title="可试用时长" method="PUT">
+        <div>
+            <div class="input-group">
+                <input type="text" class="form-control form-param" name="trial_duration" placeholder="0" required />
+                <span class="input-group-text">秒</span>
+            </div>
+        </div>
+    </x-modals.simple>
+
+    <x-modals.simple id="modal-prices" title="产品定价" large="true">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="w-50">类型/地址</th>
+                    <th class="w-50">文本/回调</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for ($i = 0;$i < 4;$i++)
+                <tr>
+                    <td>
+                        <div>
+                            <div class="input-group">
+                                <select class="form-select form-param" name="data[{{ $i }}][type]" style="width: 50px">
+                                    <option value="TRC20">TRC20</option>
+                                    <option value="ERC20">ERC20</option>
+                                </select>
+                                <input type="text" class="form-control form-param" name="data[{{ $i }}][number]" placeholder="0" />
+                                <span class="input-group-text">U</span>
+                            </div>
+                        </div>
+                        <div>
+                            <input type="text" class="form-control form-param border-top-0" name="data[{{ $i }}][address]" placeholder="地址" />
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <input type="text" class="form-control form-param" name="data[{{ $i }}][label]" placeholder="文本" />
+                        </div>
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-param" name="data[{{ $i }}][year]" placeholder="0"  />
+                                    <span class="input-group-text">年</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-param" name="data[{{ $i }}][month]" placeholder="0"  />
+                                    <span class="input-group-text">月</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-param" name="data[{{ $i }}][day]" placeholder="0"  />
+                                    <span class="input-group-text">日</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                @endfor
+            </tbody>
+        </table>
     </x-modals.simple>
 
     <x-modals.simple id="modal-getMyCommands" title="指令详情">
@@ -199,7 +278,41 @@
                 var keyboardModal = new bootstrap.Modal(document.getElementById('modal-keyboard'));
                 // 回调模态框
                 var callbackModal = new bootstrap.Modal(document.getElementById('modal-callbacks'));
+                // 定价模态框
+                var priceModal = new bootstrap.Modal(document.getElementById('modal-prices'));
 
+
+                // 查看定价
+                $('.btn-prices').on('click', function(){
+                    $btn = $(this);
+                    let url = $btn.data('url');
+                    let seturl = $btn.data('seturl');
+
+                    // 查询定价
+                    ajax({
+                        method: 'get',
+                        url: url,
+                        successCallback: function(res){
+                            // 整理数据
+                            if (res.data) {
+                                for (let i = 0; i < res.data.length; i++) {
+                                    const price = res.data[i];
+                                    $('#modal-prices [name="data[' + i + '][type]"]').val(price.type);
+                                    $('#modal-prices [name="data[' + i + '][number]"]').val(price.number);
+                                    $('#modal-prices [name="data[' + i + '][address]"]').val(price.address);
+                                    $('#modal-prices [name="data[' + i + '][label]"]').val(price.label);
+                                    $('#modal-prices [name="data[' + i + '][callback]"]').val(price.callback);
+                                    $('#modal-prices [name="data[' + i + '][year]"]').val(price.year);
+                                    $('#modal-prices [name="data[' + i + '][month]"]').val(price.month);
+                                    $('#modal-prices [name="data[' + i + '][day]"]').val(price.day);
+                                }
+                            }
+                            // 显示模态框
+                            $('#modal-prices').parents('form').attr('action', seturl);
+                            priceModal.show();
+                        }
+                    }, $btn);
+                });
                 // 查看指令
                 $('.btn-getMyCommands').on('click', function(){
                     $btn = $(this);
@@ -224,7 +337,6 @@
                         }
                     }, $btn);
                 });
-
                 // 查看键盘
                 $('.btn-keyboard').on('click', function(){
                     $btn = $(this);
@@ -255,12 +367,10 @@
                     // 显示模态框
                     keyboardModal.show();
                 });
-
                 // 键盘添加
                 $('.btn-keyboard-add').on('click', function(){
                     $('#modal-keyboard textarea').val($('#modal-keyboard textarea').val() + split + $('#modal-keyboard select').val());
                 });
-
                 // 查看回调
                 $('.btn-callbacks').on('click', function(){
                     $btn = $(this);

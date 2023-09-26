@@ -38,6 +38,9 @@ class TelegramController extends Controller
         if ($hash != md5($robot['token'])) {
             return '-4';
         }
+        if (empty($robot->user['status'])) {
+            return '-5';
+        }
 
         // 返回结果
         return (new Robot($robot->token, $robot->user->username, $robot))->handle(json_decode($request->getContent(), true),);

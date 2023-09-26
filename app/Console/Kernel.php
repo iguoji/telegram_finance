@@ -2,6 +2,8 @@
 
 namespace App\Console;
 
+use App\Jobs\CheckOrder;
+use App\Jobs\PullTrc20;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -12,7 +14,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // 检查订单
+        $schedule->job(new CheckOrder)->everyFiveSeconds();
+        // 拉取Trc20交易记录
+        $schedule->job(new PullTrc20)->everyFiveSeconds();
     }
 
     /**
