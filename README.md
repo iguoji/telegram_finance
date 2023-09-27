@@ -11,8 +11,18 @@ php artisan route:cache
 php artisan view:cache
 
 php artisan storage:link
+
+php artisan octane:start
+systemctl enable octane
+systemctl start octane
+
 php artisan queue:work
+systemctl enable queue
+systemctl start queue
+
 php artisan schedule:work
+systemctl enable schedule
+systemctl start schedule
 
 ```
 ## 环境部署
@@ -172,14 +182,19 @@ server {
 
 ```conf
 [Unit]
-Description=Laravel Octane Service
-After=php8.1-fpm.service
+Description=Laravel Octane Server
+After=network.target
 
 [Service]
-Type=forking
-ExecStart=php /home/wwwroot/telegram_finance/artisan octane:start
+WorkingDirectory=/home/wwwroot/telegram_finance/
+ExecStart=/bin/bash -c "php /home/wwwroot/telegram_finance/artisan octane:start &"
 ExecReload=php /home/wwwroot/telegram_finance/artisan octane:reload
 ExecStop=php /home/wwwroot/telegram_finance/artisan octane:stop
+Type=forking
+Restart=always
+LimitNOFILE=infinity
+User=root
+Group=root
 
 [Install]
 WantedBy=multi-user.target
@@ -193,8 +208,13 @@ Description=Laravel Queue Service
 After=octane.service
 
 [Service]
+WorkingDirectory=/home/wwwroot/telegram_finance/
+ExecStart=/bin/bash -c "php /home/wwwroot/telegram_finance/artisan queue:work &"
 Type=forking
-ExecStart=php /home/wwwroot/telegram_finance/artisan queue:work
+Restart=always
+LimitNOFILE=infinity
+User=root
+Group=root
 
 [Install]
 WantedBy=multi-user.target
@@ -208,9 +228,13 @@ Description=Laravel Schedule Service
 After=octane.service
 
 [Service]
+WorkingDirectory=/home/wwwroot/telegram_finance/
+ExecStart=/bin/bash -c "php /home/wwwroot/telegram_finance/artisan schedule:work &"
 Type=forking
-ExecStartPre=cd /home/wwwroot/telegram_finance/
-ExecStart=php /home/wwwroot/telegram_finance/artisan schedule:work
+Restart=always
+LimitNOFILE=infinity
+User=root
+Group=root
 
 [Install]
 WantedBy=multi-user.target
