@@ -4,8 +4,12 @@ use App\Telegram\Callbacks\CancelKeyboard;
 use App\Telegram\Callbacks\Expires;
 use App\Telegram\Callbacks\HelpHowSetAdmin;
 use App\Telegram\Callbacks\HelpHowSetOperator;
+use App\Telegram\Callbacks\In;
 use App\Telegram\Callbacks\PlaceOrder;
+use App\Telegram\Callbacks\RemoveGroupOperator;
 use App\Telegram\Callbacks\SelfPayment;
+use App\Telegram\Callbacks\SetGroupOperator;
+use App\Telegram\Callbacks\ShowGroupOperator;
 use App\Telegram\Callbacks\SwitchComputer;
 use App\Telegram\Callbacks\Trial;
 use App\Telegram\Callbacks\AllBill;
@@ -51,41 +55,34 @@ return [
         'PlaceOrder'        =>  PlaceOrder::class,
         '到期时间'            =>  Expires::class,
 
+        '显示操作员'        =>  ShowGroupOperator::class,
+        '设置操作员'        =>  SetGroupOperator::class,
+        '添加操作员'        =>  SetGroupOperator::class,
+        '增加操作员'        =>  SetGroupOperator::class,
+        '删除操作员'        =>  RemoveGroupOperator::class,
+
         '下发'               =>  '',
-        '+'                 =>  '',
+
+        '+'                  =>  In::class,
+        '入款'               =>  In::class,
+
         '-'                 =>  '',
-        '*'                 =>  '',
-        '/'                 =>  '',
 
         '取消键盘'          =>   CancelKeyboard::class,
     ],
 
     // 回调参数
     'parameters'                    =>  [
-        '+'                         =>  [
-            'pre'   =>  true,
-            'suf'   =>  true,
-        ],
-        '-'                         =>  [
-            'pre'   =>  true,
-            'suf'   =>  true,
-        ],
-        '*'                         =>  [
-            'pre'   =>  true,
-            'suf'   =>  true,
-        ],
-        '/'                         =>  [
-            'pre'   =>  true,
-            'suf'   =>  true,
-        ],
-        '下发'                      =>  [
-            'pre'   =>  false,
-            'suf'   =>  true,
-        ],
-        'PlaceOrder'                =>  [
-            'pre'   =>  false,
-            'suf'   =>  true,
-        ],
+        '设置操作员',
+        '增加操作员',
+        '添加操作员',
+        '删除操作员',
+
+        '+',
+        '-',
+        
+        '下发',
+        'PlaceOrder',
     ],
 
     // 机器人列表

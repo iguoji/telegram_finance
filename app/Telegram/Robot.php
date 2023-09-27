@@ -3,6 +3,8 @@
 namespace App\Telegram;
 
 use App\Jobs\SendMessage;
+use App\Models\TelegramGroup;
+use App\Models\TelegramGroupOperator;
 use App\Models\TelegramRobot;
 use App\Models\TelegramUser;
 use Illuminate\Http\UploadedFile;
@@ -64,20 +66,8 @@ class Robot
                 return [$abstract, $class, null];
             }
             // 支持参数
-            if (isset($parameters[$abstract])) {
-                $param = $parameters[$abstract];
-                // 支持前缀参数，并结尾相等，例如：参数 回调
-                if (isset($param['pre']) && $param['pre'] && isset($param['suf']) && !$param['suf'] && str_ends_with($text, $abstract)) {
-                    return [$abstract, $class, trim(mb_substr($text, 0, -mb_strlen($abstract)))];
-                }
-                // 支持后缀参数，并开头相等
-                if (isset($param['pre']) && !$param['pre'] && isset($param['suf']) && $param['suf'] && str_starts_with($text, $abstract)) {
-                    return [$abstract, $class, trim(mb_substr($text, mb_strlen($abstract)))];
-                }
-                // 前后缀都支持，并存在其中
-                if (isset($param['pre']) && $param['pre'] && isset($param['suf']) && $param['suf'] && str_contains($text, $abstract)) {
-                    return [$abstract, $class, $text];
-                }
+            if (str_starts_with($text, $abstract) && in_array($abstract, $parameters)) {
+                return [$abstract, $class, trim(mb_substr($text, mb_strlen($abstract)))];
             }
         }
 
@@ -97,56 +87,121 @@ class Robot
         if (!empty($context['update_id'])) {
             // 消息对象
             $update = new Update($context);
+
+            // 私聊
+            if ($update->getChatType() == Chat::TYPE_PRIVATE) {
+                // 可用的命令列表
+                $matches = $this->robot->private;
+            } else {
+                // 当前机器人在群里的身份变化消息
+                if ($update->isMyChatMemberMessage()) {
+                    // 查询该组曾经是否存在
+                    $group = TelegramGroup::find($update->getChatId());
+                    if (empty($group)) {
+                        // 创建新组
+                        $group = new TelegramGroup($update->getChat());
+                        $group->status = $update->getMyNewChatMemberStatus();
+                        $group->inviter = $update->getFromId();
+
+                        // 欢迎语
+                        $this->sendMessage([
+                            'chat_id'       =>  $update->getChatId(),
+                            'text'          =>  '感谢您把我添加到贵群！'. PHP_EOL . '当前本群的机器人管理员：@' . $update->getFromUsername(). PHP_EOL . '下一步：',
+                        ]);
+                    } else {
+                        // 更新属性
+                        $group->status = $update->getMyNewChatMemberStatus();
+                        // 老身份为非组成员，那么新身份改变，必定是有人重新邀请我进群
+                        if ($update->getMyOldChatMemberStatus() == Chat::STATUS_LEFT && $update->getMyNewChatMemberStatus() != Chat::STATUS_LEFT) {
+                            // 更改邀请者
+                            $group->inviter = $update->getFromId();
+
+                            // 欢迎语
+                            $this->sendMessage([
+                                'chat_id'       =>  $update->getChatId(),
+                                'text'          =>  '感谢您把我添加到贵群！'. PHP_EOL . '当前本群的机器人管理员：@' . $update->getFromUsername(). PHP_EOL . '下一步：',
+                            ]);
+                        }
+                    }
+                    // 保存更新
+                    $group->saveOrFail();
+                } 
+                // 新组成立，从老组迁移而来，From为系统
+                else if (!empty($update->getMigrateFromChatId())) {
+                    // 查询该组曾经是否存在
+                    $group = TelegramGroup::find($update->getChatId());
+                    if (empty($group)) {
+                        // 创建新组
+                        $group = new TelegramGroup($update->getChat());
+                    }
+                    // 查询老组的信息
+                    $oldGroup = TelegramGroup::find($update->getMigrateFromChatId());
+                    if (!empty($oldGroup)) {
+                        // 从老组继承属性
+                        $group->status = $oldGroup->status;
+                        $group->inviter = $oldGroup->inviter;
+                    }
+                    // 保存新组信息
+                    $group->old_id = $update->getMigrateFromChatId();
+                    $group->saveOrFail();
+                }
+                // 老组弃用，迁移至新组，From为管理员
+                else if (!empty($update->getMigrateToChatId())) {
+                    // 查询老组
+                    $group = TelegramGroup::find($update->getChatId());
+                    if (!empty($group)) {
+                        // 更新老组中的属性
+                        $group->new_id = $update->getMigrateToChatId();
+                        $group->saveOrFail();
+                    }
+                }
+                // 其他消息
+                else {
+                    // 查询群组
+                    $group = Cache::remember('telegram:group:' . $update->getChatId(), 3600, function() use($update){
+                        return TelegramGroup::find($update->getChatId());
+                    });
+                }
+                
+                // 没有得到组信息
+                if (empty($group)) {
+                    return $this->sendMessage([
+                        'chat_id'       =>  $update->getChatId(),
+                        'text'          =>  '该组未授权，请将机器人删除重新邀请进群！',
+                    ]);
+                }
+
+                // 获取身份
+                if ($group->inviter == $update->getFromId()) {
+                    // 邀请者就是管理员
+                    $matches = $this->robot->group_administrator;
+                } else {
+                    // 操作员 group_operator
+                    $oper = TelegramGroupOperator::where('group_id', $update->getChatId())->where(function($query) use($update){
+                        $query->where('user_id', $update->getFromId())->orWhere('username', $update->getFromUsername());
+                    })->first();
+                    if (empty($oper)) {
+                        // 普通成员
+                        $matches = $this->robot->group_default;
+                    } else {
+                        // 操作者
+                        $matches = $this->robot->group_operator;
+                    }
+                }
+            }
+
             // 文本内容
             $text = $update->getText();
             // 匹配模式
             list($callback, $callbackClass, $argument) = $this->match($text);
             if ($callback && $callbackClass) {
-                // 私聊
-                if ($update->getChatType() == Chat::TYPE_PRIVATE) {
-                    // 可用的命令列表
-                    $matches = $this->robot->private;
-                    // 存在使用该命令的资格
-                    if (in_array($callback, $matches)) {
-                        // 执行命令
-                        return (new $callbackClass($this, $update))->handle($argument);
-                    }
-                } else {
-                    // 获取身份
-
+                // 存在使用该命令的资格
+                if (in_array($callback, $matches)) {
+                    // 执行命令
+                    Log::debug('robot handle callback', [$text, $callback, $callbackClass, $argument]);
+                    return (new $callbackClass($this, $update))->handle($argument);
                 }
             }
-            
-            
-            // $matches = $update->getChatType() == Chat::TYPE_PRIVATE ? ;
-            // foreach ($variable as $key => $value) {
-            //     # code...
-            // }
-            // 检查指令
-            // foreach ($this->commands as $usage => $class) {
-            //     // 如果以该指令开头
-            //     if (str_starts_with($text, $usage)) {
-            //         $ins = app($this->username . '.' . $usage);
-            //         //$ins = new $class($this, $update);
-            //         $ins->setRobot($this)->setUpdate($update);
-            //         if ($ins->validate()) {
-            //             return $ins->execute();
-            //         }
-            //     }
-            // }
-
-            // // 检查回调
-            // foreach ($this->callbacks as $usage => $class) {
-            //     // 如果以该指令开头
-            //     if (str_starts_with($text, $usage)) {
-            //         $ins = app($this->username . '.' . $usage);
-            //         //$ins = new $class($this, $update);
-            //         $ins->setRobot($this)->setUpdate($update);
-            //         if ($ins->validate()) {
-            //             return $ins->execute();
-            //         }
-            //     }
-            // }
         }
 
         // 返回结果
@@ -172,6 +227,8 @@ class Robot
         // 请求地址
         $url = 'http://127.0.0.1:8081/bot' . $this->token . '/' . $method;
 
+        Log::debug('request', [$url, $paramaters]);
+
         // 循环参数
         $files = [];
         foreach ($paramaters as $field => $param) {
@@ -179,10 +236,13 @@ class Robot
                 $files[$field] = $param;
             }
         }
+
+        // Log::debug('request 1', []);
         
         // 获取差集
         $paramaters = array_diff_key($paramaters, $files);
         
+        // Log::debug('request 2', []);
         // 执行请求
         $http = Http::timeout(3);
         foreach ($files as $field => $file) {
@@ -193,12 +253,17 @@ class Robot
             abort(555, 'empty result');
         }
 
+        // Log::debug('request 3', []);
+
         // 返回结果
         $obj = $info->json();
+
+        // Log::debug('request 4', [$obj]);
         if ($obj['ok']) {
             return $obj['result'] === true ? ($obj['description'] ?? 'success') : $obj['result'];
         } else {
             abort($obj['error_code'], $obj['description'] ?? $obj['error_code']);
+            return $obj['description'] ?? $obj['error_code'];
         }
     }
 
