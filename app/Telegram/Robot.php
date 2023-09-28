@@ -125,7 +125,7 @@ class Robot
                     }
                     // 保存更新
                     $group->saveOrFail();
-                } 
+                }
                 // 新组成立，从老组迁移而来，From为系统
                 else if (!empty($update->getMigrateFromChatId())) {
                     // 查询该组曾经是否存在
@@ -162,7 +162,7 @@ class Robot
                         return TelegramGroup::find($update->getChatId());
                     });
                 }
-                
+
                 // 没有得到组信息
                 if (empty($group)) {
                     return $this->sendMessage([
@@ -176,9 +176,9 @@ class Robot
                     // 邀请者就是管理员
                     $matches = $this->robot->group_administrator;
                 } else {
-                    // 操作员 group_operator
+                    // 操作员
                     $oper = TelegramGroupOperator::where('group_id', $update->getChatId())->where(function($query) use($update){
-                        $query->where('user_id', $update->getFromId())->orWhere('username', $update->getFromUsername());
+                        $query->where('user_id', $update->getFromId())->orWhere('username', '@' . $update->getFromUsername());
                     })->first();
                     if (empty($oper)) {
                         // 普通成员
@@ -238,10 +238,10 @@ class Robot
         }
 
         // Log::debug('request 1', []);
-        
+
         // 获取差集
         $paramaters = array_diff_key($paramaters, $files);
-        
+
         // Log::debug('request 2', []);
         // 执行请求
         $http = Http::timeout(3);

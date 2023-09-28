@@ -14,6 +14,14 @@ use Illuminate\Support\Facades\Route;
 */
 
 /**
+ * 群组
+ */
+Route::prefix('group')->name('group.')->controller(\App\Http\Controllers\GroupController::class)->group(function(){
+    Route::get('/{group}/bill', 'bill')->name('bill');
+    Route::get('/{group}/export/{date?}', 'export')->name('export');
+});
+
+/**
  * 管理员
  */
 Route::prefix('admin')->name('admin.')->group(function(){

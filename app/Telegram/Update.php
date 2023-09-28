@@ -18,7 +18,7 @@ class Update
      */
     public function getMessage() : array
     {
-        return $this->context['message'] ?? $this->context['callback_query']['message'] ?? [];
+        return $this->context['message'] ?? $this->context['edited_message'] ?? $this->context['callback_query']['message'] ?? [];
     }
 
     /**

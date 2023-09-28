@@ -15,6 +15,7 @@ use App\Telegram\Callbacks\Trial;
 use App\Telegram\Callbacks\AllBill;
 use App\Telegram\Callbacks\Bill;
 use App\Telegram\Callbacks\Help;
+use App\Telegram\Callbacks\Out;
 use App\Telegram\Callbacks\Start;
 
 return [
@@ -36,7 +37,7 @@ return [
         '详细使用说明书'      =>  Help::class,
 
         '如何设置权限人'      =>  HelpHowSetAdmin::class,
-        '如何设置群内操作人'  =>  HelpHowSetOperator::class, 
+        '如何设置群内操作人'  =>  HelpHowSetOperator::class,
         '开启/关闭计算功能'   =>  SwitchComputer::class,
 
         '/bill'             =>  Bill::class,
@@ -61,12 +62,12 @@ return [
         '增加操作员'        =>  SetGroupOperator::class,
         '删除操作员'        =>  RemoveGroupOperator::class,
 
-        '下发'               =>  '',
 
         '+'                  =>  In::class,
         '入款'               =>  In::class,
+        '-'                 =>  In::class,
 
-        '-'                 =>  '',
+        '下发'               =>  Out::class,
 
         '取消键盘'          =>   CancelKeyboard::class,
     ],
@@ -78,9 +79,10 @@ return [
         '添加操作员',
         '删除操作员',
 
+        '入款',
         '+',
         '-',
-        
+
         '下发',
         'PlaceOrder',
     ],

@@ -3,12 +3,14 @@
 namespace App\Telegram\Callbacks;
 
 use App\Jobs\PushBill;
+use App\Models\Bill;
+use App\Models\BillDetail;
 use App\Telegram\Callback;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class In extends Callback
+class Out extends Callback
 {
     /**
      * 执行命令
@@ -16,12 +18,9 @@ class In extends Callback
     public function execute(string $argument = null) : mixed
     {
         // 参数为数字
-        if (is_numeric($argument) && is_numeric($argument[0])) {
+        if (is_numeric($argument)) {
             // 当前数字
             $number = (float) $argument;
-            if (str_starts_with($this->update->getText(), '-')) {
-                $number = -$number;
-            }
             // 群组id
             $group_id = $this->update->getChatId();
             // 来源用户
@@ -30,7 +29,7 @@ class In extends Callback
             $date = date('Y-m-d');
             // 缓存Key
             $billKey = 'bill:' . $this->robot->username . ':' . $group_id . ':' . $date;
-            $detailsKey = $billKey . ':details:in';
+            $detailsKey = $billKey . ':details:out';
             // 缓存有效期
             $ttl = 86500;
 
@@ -44,8 +43,8 @@ class In extends Callback
                     'out_count' =>  0,
                 ];
             });
-            $bill['in'] += $number;
-            $bill['in_count']++;
+            $bill['out'] += $number;
+            $bill['out_count']++;
             Cache::put($billKey, $bill, $ttl);
 
             // 流水记录
@@ -56,7 +55,7 @@ class In extends Callback
             Cache::put($detailsKey, $details, $ttl);
 
             // 保存到数据库
-            PushBill::dispatch($group_id, $date, 1, $number, $from);
+            PushBill::dispatch($group_id, $date, 2, $number, $from);
 
             // 显示账单
             (new \App\Telegram\Callbacks\Bill($this->robot, $this->update))->execute();
