@@ -100,7 +100,7 @@
                                 </tr>
                                 <tr>
                                     <td class="w-25">应下发：</td>
-                                    <td class="w-75">{{ $in * $bill->rate }}</td>
+                                    <td class="w-75">{{ $in * ($bill->rate / 100) }}</td>
                                 </tr>
                                 <tr>
                                     <td class="w-25">总下发：</td>
@@ -108,7 +108,7 @@
                                 </tr>
                                 <tr>
                                     <td class="w-25">未下发：</td>
-                                    <td class="w-75">{{ $in * $bill->rate - $out }}</td>
+                                    <td class="w-75">{{ $in * ($bill->rate / 100) - $out }}</td>
                                 </tr>
                             </tbody>
                         </table>

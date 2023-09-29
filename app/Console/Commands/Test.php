@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use NXP\MathExecutor;
 use App\Telegram\Robot;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -22,6 +23,8 @@ class Test extends Command
      */
     protected $description = 'Command description';
 
+
+
     /**
      * Execute the console command.
      */
@@ -32,12 +35,20 @@ class Test extends Command
         $startTime = '';
 
 
-        $robot = new Robot(config('telegram.bots.zidongjizhang_bot.token'), 'zidongjizhang_bot');
-        $res = $robot->getChat([
-            'chat_id'       =>  -1001963102447
-        ]);
-        var_dump($res);
-        
+        // $res = Http::get('https://api.trongrid.io/v1/accounts/TY8jNABVoReroGTuPhyb9RYhfNtyB3bb1p/transactions/trc20?only_confirmed=true&only_to=true&min_timestamp=0&limit=2');
+        // var_dump($res->json());
+
+        var_dump(
+            $this->isValidMathExpression('2 + 0'),
+        );
+
+
+        // $robot = new Robot(config('telegram.bots.zidongjizhang_bot.token'), 'zidongjizhang_bot');
+        // $res = $robot->getChat([
+        //     'chat_id'       =>  -1001963102447
+        // ]);
+        // var_dump($res);
+
         // /*$res = Http::timeout(3)->retry(3, 1000)
         //         ->withHeader('TRON-PRO-API-KEY', $tronKey)
         //         ->withUrlParameters([
@@ -53,7 +64,7 @@ class Test extends Command
         //             'filterTokenValue'          =>  1,
         //         ])
         //         ->get('https://apilist.tronscanapi.com/api/token_trc20/transfers');*/
-        
+
         //     $res = Http::timeout(3)->retry(3, 1000)
         //         ->withHeader('TRON-PRO-API-KEY', $tronKey)
         //         // ->withUrlParameters([
@@ -112,4 +123,7 @@ class Test extends Command
 
         // $this->info('1');
     }
+
+
+
 }

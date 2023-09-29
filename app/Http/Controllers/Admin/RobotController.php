@@ -92,7 +92,7 @@ class RobotController extends Controller
             // 更新缓存
             Cache::put('telegram:robot:' . $me['id'], $robot);
         });
-        
+
 
         // 返回结果
         return success();
@@ -111,7 +111,7 @@ class RobotController extends Controller
      */
     public function refresh(string $id)
     {
-        
+
     }
 
     /**
@@ -332,7 +332,7 @@ class RobotController extends Controller
         $request->validate([
             'commands'      =>  ['required'],
         ]);
-        
+
         // 查询机器人
         $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
@@ -390,20 +390,22 @@ class RobotController extends Controller
      */
     public function setWebhook(Request $request, string $id)
     {
-        // 参数验证
-        $request->validate([
-            'url'       =>  ['required'],
-        ]);
-
         // 查询机器人
         $robot = TelegramRobot::where('id', $id)->firstOrFail();
 
         // 调用接口
+        $url = $request->input('url', ' ');
         $robotApi = new Robot($robot->token);
-        $res = $robotApi->setWebhook([
-            'url'               =>  $request->url,
-            'secret_token'      =>  $robot->id . '___' . md5($robot->token),
-        ]);
+        if (empty($url)) {
+            $res = $robotApi->setWebhook([
+                'url'               =>  '',
+            ]);
+        } else {
+            $res = $robotApi->setWebhook([
+                'url'               =>  $url,
+                'secret_token'      =>  $robot->id . '___' . md5($robot->token),
+            ]);
+        }
 
         // 修改成功
         return success($res);

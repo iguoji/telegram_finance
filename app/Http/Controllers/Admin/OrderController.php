@@ -26,7 +26,7 @@ class OrderController extends Controller
         $robots = TelegramRobot::orderBy('created_at')->get();
 
         // 查询对象
-        $query = Order::with(['user', 'robot']);
+        $query = Order::with(['user', 'robot', 'price']);
 
         // 条件：按状态查询
         if ($request->filled('status')) {

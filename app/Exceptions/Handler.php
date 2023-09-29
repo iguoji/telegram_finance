@@ -3,7 +3,10 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -24,6 +27,18 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
+
+        $this->reportable(function(HttpResponseException $ex){
+            Log::error('http eerror1', [$ex->getResponse()->headers]);
+            return true;
+        });
+
+        $this->reportable(function(HttpException $ex){
+            Log::error('http eerror2', [$ex->getHeaders()]);
+            return true;
+        });
+
+        // $this->stopIgnoring(HttpException::class);
         // $this->reportable(function (Throwable $e) {
         //     //
         // });

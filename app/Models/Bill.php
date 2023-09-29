@@ -15,6 +15,6 @@ class Bill extends Model
      */
     public function details()
     {
-        return $this->hasMany(BillDetail::class, 'bill_id', 'id');
+        return $this->hasMany(BillDetail::class, 'bill_id', 'id')->withTrashed();
     }
 }

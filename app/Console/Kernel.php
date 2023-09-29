@@ -15,9 +15,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // 检查订单
-        $schedule->job(new CheckOrder)->everyFiveSeconds();
+        $schedule->job(new CheckOrder)->everyMinute();
         // 拉取Trc20交易记录
-        $schedule->job(new PullTrc20)->everyFiveSeconds();
+        $schedule->job(new PullTrc20)->everyMinute();
     }
 
     /**

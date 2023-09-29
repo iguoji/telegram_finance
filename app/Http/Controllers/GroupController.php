@@ -134,7 +134,7 @@ class GroupController extends Controller
 
         // 应下发：
         $sheet->getCellByColumnAndRow(1, $row)->setValue('应下发：');
-        $sheet->getCellByColumnAndRow(2, $row++)->setValue($in * $bill->rate);
+        $sheet->getCellByColumnAndRow(2, $row++)->setValue($in * ($bill->rate / 100));
 
         // 总下发：
         $sheet->getCellByColumnAndRow(1, $row)->setValue('总下发：');
@@ -142,7 +142,7 @@ class GroupController extends Controller
 
         // 未下发：
         $sheet->getCellByColumnAndRow(1, $row)->setValue('未下发：');
-        $sheet->getCellByColumnAndRow(2, $row++)->setValue($in * $bill->rate - $out);
+        $sheet->getCellByColumnAndRow(2, $row++)->setValue($in * ($bill->rate / 100) - $out);
 
         // Excel文件
         $writer = new Xlsx($spreadsheet);

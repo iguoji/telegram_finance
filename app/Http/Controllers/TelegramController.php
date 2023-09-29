@@ -17,30 +17,28 @@ class TelegramController extends Controller
      */
     public function __invoke(Request $request)
     {
-        // 分析机器人
+        // 获取密钥
         $secretToken = $request->header('X-Telegram-Bot-Api-Secret-Token', '');
-        if (empty($secretToken)) {
-            return '-1';
-        }
+        abort_if(empty($secretToken), 500, 'invalid secret -1');
+
+        // 从密钥中解析账号
         $arr = explode('___', $secretToken);
-        if (empty($arr) || count($arr) !== 2) {
-            return '-2';
-        }
+        abort_if(empty($arr) || count($arr) !== 2, 500, 'invalid secret -2');
         list($id, $hash) = $arr;
 
         // 查询机器人
         $robot = Cache::rememberForever('telegram:robot:' . $id, function() use($id){
-            return TelegramRobot::find($id);
+            return TelegramRobot::with(['user'])->find($id);
         });
-        if (empty($robot) || empty($robot['token'])) {
-            return '-3';
-        }
-        if ($hash != md5($robot['token'])) {
-            return '-4';
-        }
-        if (empty($robot->user['status'])) {
-            return '-5';
-        }
+
+        // 如果不存在该机器人
+        abort_if(empty($robot) || empty($robot['token']), 500, 'invalid robot -4');
+
+        // 密钥不对
+        abort_if($hash != md5($robot['token']), 500, 'invalid robot -5');
+
+        // 状态不对
+        abort_if(empty($robot->user['status']), 500, 'invalid robot -6');
 
         // 返回结果
         return (new Robot($robot->token, $robot->user->username, $robot))->handle(json_decode($request->getContent(), true),);

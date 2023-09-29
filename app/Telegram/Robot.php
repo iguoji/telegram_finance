@@ -2,6 +2,7 @@
 
 namespace App\Telegram;
 
+use NXP\MathExecutor;
 use App\Jobs\SendMessage;
 use App\Models\TelegramGroup;
 use App\Models\TelegramGroupOperator;
@@ -73,6 +74,31 @@ class Robot
 
         // 没有找到
         return [null, null, null];
+    }
+
+    /**
+     * 是否为有效的数学表达式
+     */
+    public function isValidMathExpression($expression) {
+        // 检查是否包含至少一个加减乘除符号
+        if (!preg_match('#[+\-*/]#', $expression)) {
+            return false;
+        }
+
+        // 检查是否只包含数字、小数、正负数、加减乘除符号和小括号
+        if (!preg_match('#^[0-9()+\-*/. ]+$#', $expression)) {
+            return false;
+        }
+
+        // 检查括号匹配
+        $openCount = substr_count($expression, '(');
+        $closeCount = substr_count($expression, ')');
+        if ($openCount !== $closeCount) {
+            return false;
+        }
+
+        // 返回结果
+        return true;
     }
 
     /**
@@ -192,6 +218,7 @@ class Robot
 
             // 文本内容
             $text = $update->getText();
+
             // 匹配模式
             list($callback, $callbackClass, $argument) = $this->match($text);
             if ($callback && $callbackClass) {
@@ -201,6 +228,22 @@ class Robot
                     Log::debug('robot handle callback', [$text, $callback, $callbackClass, $argument]);
                     return (new $callbackClass($this, $update))->handle($argument);
                 }
+            }
+
+            try {
+                // 如果是数学表达式
+                if ($this->isValidMathExpression($text)) {
+                    $executor = new MathExecutor();
+                    $executor->useBCMath(6);
+                    $result = $executor->execute($text);
+                    $this->sendMessage([
+                        'chat_id'       =>  $update->getChatId(),
+                        'text'          =>  $result,
+                        'reply_to_message_id'   =>  $update->getMessageId(),
+                    ]);
+                }
+            } catch (\Throwable $th) {
+                // 忽略这个错误
             }
         }
 
@@ -225,6 +268,7 @@ class Robot
     public function request(string $method, array $paramaters = []) : mixed
     {
         // 请求地址
+        // $url = 'https://api.telegram.org/bot' . $this->token . '/' . $method;
         $url = 'http://127.0.0.1:8081/bot' . $this->token . '/' . $method;
 
         Log::debug('request', [$url, $paramaters]);
@@ -250,6 +294,7 @@ class Robot
         }
         $info = $http->post($url, $paramaters);
         if (empty($info)) {
+            Log::debug('request none response');
             abort(555, 'empty result');
         }
 
@@ -262,8 +307,8 @@ class Robot
         if ($obj['ok']) {
             return $obj['result'] === true ? ($obj['description'] ?? 'success') : $obj['result'];
         } else {
+            Log::debug('request error response', [$obj]);
             abort($obj['error_code'], $obj['description'] ?? $obj['error_code']);
-            return $obj['description'] ?? $obj['error_code'];
         }
     }
 

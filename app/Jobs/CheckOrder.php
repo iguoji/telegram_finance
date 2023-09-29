@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class CheckOrder implements ShouldQueue
 {
@@ -28,6 +29,7 @@ class CheckOrder implements ShouldQueue
      */
     public function handle(): void
     {
+        Log::debug(__CLASS__, ['start']);
         // 查询订单
         $orders = Order::where('status', 2)->orderBy('created_at')->limit(50)->get();
         // 超时时间
@@ -40,15 +42,9 @@ class CheckOrder implements ShouldQueue
                 $order->changeStatus(0);
             } else {
                 // 按金额查询
-                $quant = (string)($order->money * 1000000);
-                $transaction = TronTransaction::where('quant', $quant)
-                                ->where('created_at', '>=', $order->created_at)
-                                ->where('status', 0)
-                                ->where('confirmed', 1)
-                                ->where('contractRet', 'SUCCESS')
-                                ->where('finalResult', 'SUCCESS')
-                                ->where('contract_type', 'trc20')
-                                ->where('contract_address', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t')
+                $number = (string)($order->money * 1000000);
+                $transaction = TronTransaction::where('created_at', '>=', $order->created_at)
+                                ->where('number', $number)
                                 ->whereNotExists(function($query){
                                     $query->selectRaw(1)->from('orders')->whereColumn('orders.hash', 'tron_transactions.id');
                                 })->first();
@@ -59,5 +55,7 @@ class CheckOrder implements ShouldQueue
                 }
             }
         }
+
+        Log::debug(__CLASS__, ['end']);
     }
 }

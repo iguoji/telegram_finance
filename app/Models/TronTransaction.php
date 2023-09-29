@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TronTransaction extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     /**
      * The "type" of the primary key ID.
@@ -29,30 +29,9 @@ class TronTransaction extends Model
      */
     public $fillable = [
         'id',
-        'status',
-        'block_ts',
-        'from_address',
-        'from_address_tag',
-        'to_address',
-        'to_address_tag',
-        'block',
-        'quant',
-        'confirmed',
-        'contractRet',
-        'finalResult',
-        'revert',
-        'contract_type',
-        'contract_address',
-        'fromAddressIsContract',
-        'toAddressIsContract',
-        'riskTransaction',
-    ];
-
-    /**
-     * 类型转换
-     */
-    protected $casts = [
-        'from_address_tag'              =>  'array',
-        'to_address_tag'                =>  'array',
+        'from',
+        'to',
+        'number',
+        'timestamp',
     ];
 }

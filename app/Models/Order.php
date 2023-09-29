@@ -54,7 +54,7 @@ class Order extends Model
      */
     public function price()
     {
-        return $this->belongsTo(Price::class, 'price_id', 'id');
+        return $this->belongsTo(Price::class, 'price_id', 'id')->withTrashed();
     }
 
     /**
